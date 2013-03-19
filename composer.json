@@ -1,0 +1,6 @@
+{
+    "name": "dominionenterprises/mongo-queue",
+    "require": {
+        "php": ">=5.3.2"
+    }
+}
