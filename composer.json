@@ -19,9 +19,6 @@
             "role": "Developer"
         }
     ],
-    "support": {
-        "email": "tol_igroup@dominionenterprises.com"
-    },
     "license": "MIT",
     "require": {
         "php": ">=5.3.2",
