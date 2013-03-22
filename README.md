@@ -52,6 +52,7 @@ Developers may be contacted at:
 
 ##Tests
 
+Install and start [mongodb](http://www.mongodb.org).
 With a checkout of the code get [Composer](http://getcomposer.org) in your PATH and run:
 
 ```bash
