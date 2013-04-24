@@ -433,7 +433,7 @@ final class Queue
                 try {
                     $this->_collection->ensureIndex($index, array('name' => $name));
                 } catch (\MongoCursorException $e) {
-                    continue;//this happens when the name was too long, let continue
+                    //this happens when the name was too long, let continue
                 }
 
                 foreach ($this->_collection->getIndexInfo() as $existingIndex) {
@@ -441,13 +441,7 @@ final class Queue
                         return;
                     }
                 }
-
-                //ignore since we only get here if the same name but a different spec is found.
-                //since the name it tried was generated this is hard to test
-                //@codeCoverageIgnoreStart
             }
-
-            //@codeCoverageIgnoreEnd
         }
 
         throw new \Exception('couldnt create index after 5 attempts');
