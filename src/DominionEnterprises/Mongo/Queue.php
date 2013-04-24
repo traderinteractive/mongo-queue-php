@@ -79,7 +79,7 @@ final class Queue
         }
 
         $completeFields['priority'] = 1;
-        $completeFields['_id'] = 1;
+        $completeFields['created'] = 1;
 
         foreach ($afterSort as $key => $value) {
             if (!is_string($key)) {
@@ -199,7 +199,7 @@ final class Queue
 
         $update = array('$set' => array('resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true));
         $fields = array('payload' => 1);
-        $options = array('sort' => array('priority' => 1, '_id' => 1));
+        $options = array('sort' => array('priority' => 1, 'created' => 1));
 
         //ints overflow to floats, should be fine
         $end = microtime(true) + ($waitDurationInMillis / 1000.0);
@@ -340,6 +340,7 @@ final class Queue
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
+            'created' => new \MongoDate(),
         );
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY) so we can just send
@@ -406,6 +407,7 @@ final class Queue
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
+            'created' => new \MongoDate(),
         );
 
         $this->_collection->insert($message);
