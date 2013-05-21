@@ -244,7 +244,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $messageTwo = array(
             'one' => array('two' => array('three' => 5, 'notused' => 'notused'), 'notused' => 'notused'),
-            'notused' => 'notused'
+            'notused' => 'notused',
         );
 
         $this->_queue->send(array('key1' => 0, 'key2' => true));
@@ -600,7 +600,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
             'running' => false,
             'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => 34,
-            'priority' => 0.8
+            'priority' => 0.8,
         );
 
         $message = $this->_collection->findOne();

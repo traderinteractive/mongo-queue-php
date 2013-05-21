@@ -7,6 +7,11 @@ if ($returnStatus !== 0) {
     exit(1);
 }
 
+passthru('./vendor/bin/phpcs --standard=' . __DIR__ . '/vendor/dominionenterprises/dws-coding-standard/DWS -n src tests *.php', $returnStatus);
+if ($returnStatus !== 0) {
+    exit(1);
+}
+
 passthru('vendor/bin/phpunit --coverage-clover clover.xml tests', $returnStatus);
 if ($returnStatus !== 0) {
     exit(1);
