@@ -431,7 +431,7 @@ final class Queue
                 //so we use any generated name, and then find the right spec after we have called, and just go with that name.
 
                 try {
-                    $this->_collection->ensureIndex($index, array('name' => $name));
+                    $this->_collection->ensureIndex($index, array('name' => $name, 'background' => true));
                 } catch (\MongoCursorException $e) {
                     //this happens when the name was too long, let continue
                 }
