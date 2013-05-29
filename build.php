@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 chdir(__DIR__);
 
