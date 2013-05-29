@@ -79,7 +79,7 @@ final class Queue
         }
 
         $completeFields['priority'] = 1;
-        $completeFields['_id'] = 1;
+        $completeFields['created'] = 1;
 
         foreach ($afterSort as $key => $value) {
             if (!is_string($key)) {
@@ -199,7 +199,7 @@ final class Queue
 
         $update = array('$set' => array('resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true));
         $fields = array('payload' => 1);
-        $options = array('sort' => array('priority' => 1, '_id' => 1));
+        $options = array('sort' => array('priority' => 1, 'created' => 1));
 
         //ints overflow to floats, should be fine
         $end = microtime(true) + ($waitDurationInMillis / 1000.0);
@@ -340,6 +340,7 @@ final class Queue
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
+            'created' => new \MongoDate(),
         );
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY) so we can just send
@@ -406,6 +407,7 @@ final class Queue
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
+            'created' => new \MongoDate(),
         );
 
         $this->_collection->insert($message);
@@ -429,9 +431,9 @@ final class Queue
                 //so we use any generated name, and then find the right spec after we have called, and just go with that name.
 
                 try {
-                    $this->_collection->ensureIndex($index, array('name' => $name));
+                    $this->_collection->ensureIndex($index, array('name' => $name, 'background' => true));
                 } catch (\MongoCursorException $e) {
-                    continue;//this happens when the name was too long, let continue
+                    //this happens when the name was too long, let continue
                 }
 
                 foreach ($this->_collection->getIndexInfo() as $existingIndex) {
@@ -439,13 +441,7 @@ final class Queue
                         return;
                     }
                 }
-
-                //ignore since we only get here if the same name but a different spec is found.
-                //since the name it tried was generated this is hard to test
-                //@codeCoverageIgnoreStart
             }
-
-            //@codeCoverageIgnoreEnd
         }
 
         throw new \Exception('couldnt create index after 5 attempts');
