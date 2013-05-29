@@ -53,7 +53,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame(4, count($this->_collection->getIndexInfo()));
 
-        $expectedOne = array('running' => 1, 'payload.type' => 1, 'priority' => 1, '_id' => 1, 'payload.boo' => -1, 'earliestGet' => 1);
+        $expectedOne = array('running' => 1, 'payload.type' => 1, 'priority' => 1, 'created' => 1, 'payload.boo' => -1, 'earliestGet' => 1);
         $resultOne = $this->_collection->getIndexInfo();
         $this->assertSame($expectedOne, $resultOne[1]['key']);
 
@@ -61,7 +61,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $resultTwo = $this->_collection->getIndexInfo();
         $this->assertSame($expectedTwo, $resultTwo[2]['key']);
 
-        $expectedThree = array('running' => 1, 'payload.another.sub' => 1, 'priority' => 1, '_id' => 1, 'earliestGet' => 1);
+        $expectedThree = array('running' => 1, 'payload.another.sub' => 1, 'priority' => 1, 'created' => 1, 'earliestGet' => 1);
         $resultThree = $this->_collection->getIndexInfo();
         $this->assertSame($expectedThree, $resultThree[3]['key']);
     }
@@ -244,7 +244,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $messageTwo = array(
             'one' => array('two' => array('three' => 5, 'notused' => 'notused'), 'notused' => 'notused'),
-            'notused' => 'notused'
+            'notused' => 'notused',
         );
 
         $this->_queue->send(array('key1' => 0, 'key2' => true));
@@ -518,7 +518,11 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         );
 
         $message = $this->_collection->findOne();
-        unset($message['_id']);
+
+        $this->assertLessThanOrEqual(time(), $message['created']->sec);
+        $this->assertGreaterThan(time() - 10, $message['created']->sec);
+
+        unset($message['_id'], $message['created']);
         $message['resetTimestamp'] = $message['resetTimestamp']->sec;
         $message['earliestGet'] = $message['earliestGet']->sec;
 
@@ -544,7 +548,11 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         );
 
         $message = $this->_collection->findOne();
-        unset($message['_id']);
+
+        $this->assertLessThanOrEqual(time(), $message['created']->sec);
+        $this->assertGreaterThan(time() - 10, $message['created']->sec);
+
+        unset($message['_id'], $message['created']);
         $message['resetTimestamp'] = $message['resetTimestamp']->sec;
         $message['earliestGet'] = $message['earliestGet']->sec;
 
@@ -592,11 +600,15 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
             'running' => false,
             'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => 34,
-            'priority' => 0.8
+            'priority' => 0.8,
         );
 
         $message = $this->_collection->findOne();
-        unset($message['_id']);
+
+        $this->assertLessThanOrEqual(time(), $message['created']->sec);
+        $this->assertGreaterThan(time() - 10, $message['created']->sec);
+
+        unset($message['_id'], $message['created']);
         $message['resetTimestamp'] = $message['resetTimestamp']->sec;
         $message['earliestGet'] = $message['earliestGet']->sec;
 
@@ -646,7 +658,11 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         );
 
         $message = $this->_collection->findOne();
-        unset($message['_id']);
+
+        $this->assertLessThanOrEqual(time(), $message['created']->sec);
+        $this->assertGreaterThan(time() - 10, $message['created']->sec);
+
+        unset($message['_id'], $message['created']);
         $message['resetTimestamp'] = $message['resetTimestamp']->sec;
         $message['earliestGet'] = $message['earliestGet']->sec;
 
@@ -669,7 +685,11 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         );
 
         $message = $this->_collection->findOne();
-        unset($message['_id']);
+
+        $this->assertLessThanOrEqual(time(), $message['created']->sec);
+        $this->assertGreaterThan(time() - 10, $message['created']->sec);
+
+        unset($message['_id'], $message['created']);
         $message['resetTimestamp'] = $message['resetTimestamp']->sec;
         $message['earliestGet'] = $message['earliestGet']->sec;
 
