@@ -10,16 +10,16 @@
     "packages-dev": [
         {
             "name": "dominionenterprises/dws-coding-standard",
-            "version": "v1.1.2",
+            "version": "v1.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dominionenterprises/dws-coding-standard.git",
-                "reference": "v1.1.2"
+                "reference": "v1.3.1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dominionenterprises/dws-coding-standard/zipball/v1.1.2",
-                "reference": "v1.1.2",
+                "url": "https://api.github.com/repos/dominionenterprises/dws-coding-standard/zipball/v1.3.1",
+                "reference": "v1.3.1",
                 "shasum": ""
             },
             "require": {
@@ -58,7 +58,7 @@
                 "phpcs",
                 "standard"
             ],
-            "time": "2013-05-29 16:49:53"
+            "time": "2013-06-10 17:39:37"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -486,17 +486,17 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v2.2.1",
+            "version": "v2.3.0",
             "target-dir": "Symfony/Component/Yaml",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "v2.2.1"
+                "reference": "v2.3.0-RC1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/v2.2.1",
-                "reference": "v2.2.1",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/v2.3.0-RC1",
+                "reference": "v2.3.0-RC1",
                 "shasum": ""
             },
             "require": {
@@ -505,7 +505,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.2-dev"
+                    "dev-master": "2.3-dev"
                 }
             },
             "autoload": {
@@ -529,7 +529,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "http://symfony.com",
-            "time": "2013-03-23 07:49:54"
+            "time": "2013-05-10 18:12:13"
         }
     ],
     "aliases": [
