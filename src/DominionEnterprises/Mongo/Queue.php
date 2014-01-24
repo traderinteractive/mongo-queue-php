@@ -297,6 +297,7 @@ final class Queue
      * @param array $payload the data to store in the message to send. Data is handled same way as \MongoCollection::insert()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
+     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
      *
      * @return void
      *
@@ -304,8 +305,9 @@ final class Queue
      * @throws \InvalidArgumentException $earliestGet was not an int
      * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException $priority is NaN
+     * @throws \InvalidArgumentException $newTimestamp was not a bool
      */
-    public function ackSend(array $message, array $payload, $earliestGet = 0, $priority = 0.0)
+    public function ackSend(array $message, array $payload, $earliestGet = 0, $priority = 0.0, $newTimestamp = true)
     {
         $id = null;
         if (array_key_exists('id', $message)) {
@@ -328,23 +330,29 @@ final class Queue
             throw new \InvalidArgumentException('$priority was NaN');
         }
 
+        if ($newTimestamp !== true && $newTimestamp !== false) {
+            throw new \InvalidArgumentException('$newTimestamp was not a bool');
+        }
+
         if ($earliestGet > self::MONGO_INT32_MAX) {
             $earliestGet = self::MONGO_INT32_MAX;
         } elseif ($earliestGet < 0) {
             $earliestGet = 0;
         }
 
-        $newMessage = array(
+        $toSet = array(
             'payload' => $payload,
             'running' => false,
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
-            'created' => new \MongoDate(),
         );
+        if ($newTimestamp) {
+            $toSet['created'] = new \MongoDate();
+        }
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY) so we can just send
-        $this->_collection->update(array('_id' => $id), $newMessage, array('upsert' => true));
+        $this->_collection->update(array('_id' => $id), array('$set' => $toSet), array('upsert' => true));
     }
 
     /**
@@ -353,6 +361,7 @@ final class Queue
      * @param array $message message received from get().
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
+     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
      *
      * @return void
      *
@@ -360,12 +369,13 @@ final class Queue
      * @throws \InvalidArgumentException $earliestGet was not an int
      * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException priority is NaN
+     * @throws \InvalidArgumentException $newTimestamp was not a bool
      */
-    public function requeue(array $message, $earliestGet = 0, $priority = 0.0)
+    public function requeue(array $message, $earliestGet = 0, $priority = 0.0, $newTimestamp = true)
     {
         $forRequeue = $message;
         unset($forRequeue['id']);
-        $this->ackSend($message, $forRequeue, $earliestGet, $priority);
+        $this->ackSend($message, $forRequeue, $earliestGet, $priority, $newTimestamp);
     }
 
     /**
