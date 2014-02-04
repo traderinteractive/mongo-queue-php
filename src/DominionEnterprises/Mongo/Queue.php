@@ -142,6 +142,106 @@ final class Queue
     }
 
     /**
+     * TODO
+     */
+    public function ensureIndexes(array $fieldSets)
+    {
+        /* the two formats for $fieldSets
+         *
+         * array(
+         *   array('type' => 'count', 'fields' => array(), 'includeRunning' => true/false)
+         *   array('type' => 'get', 'beforeSort' => array(), 'afterSort' => array())
+         * )
+         */
+
+        $potentialIndexes = array();
+
+        foreach ($fieldSets as $fieldSet) {
+            if (!isset($fieldSet['type']) || is_string($fieldSet['type'])) {
+                throw new \InvalidArgumentException('an array in $fieldSets did not contain a "type" key');
+            }
+
+            if ($fieldSet['type'] === 'get') {
+                $completeFields = array('running' => 1);
+
+                foreach ($fieldSet['beforeSort'] as $key => $value) {
+                    if (!is_string($key)) {
+                        throw new \InvalidArgumentException('an array in $fieldSets had key in "beforeSort" that was not a string');
+                    }
+
+                    if ($value !== 1 && $value !== -1) {
+                        throw new \InvalidArgumentException(
+                            'an array in $fieldSets had value in "beforeSort" that is not 1 or -1 for ascending and descending'
+                        );
+                    }
+
+                    $completeFields["payload.{$key}"] = $value;
+                }
+
+                $completeFields['priority'] = 1;
+                $completeFields['created'] = 1;
+
+                foreach ($fieldSet['afterSort'] as $key => $value) {
+                    if (!is_string($key)) {
+                        throw new \InvalidArgumentException('an array in $fieldSets had key in "afterSort" that was not a string');
+                    }
+
+                    if ($value !== 1 && $value !== -1) {
+                        throw new \InvalidArgumentException(
+                            'an array in $fieldSets had value in "afterSort" that is not 1 or -1 for ascending and descending'
+                        );
+                    }
+
+                    $completeFields["payload.{$key}"] = $value;
+                }
+
+                $completeFields['earliestGet'] = 1;
+
+                $potentialIndexes[] = $completeFields;
+                $potentialIndexes[] = array('running' => 1, 'resetTimestamp' => 1);
+                continue;
+            }
+
+            if ($fieldSet['type'] === 'count') {
+                if (!isset($fieldSet['includeRunning']) || !is_bool($fieldSet['includeRunning'])) {
+                    throw new \InvalidArgumentException(
+                        'an array in $fieldSets with "type" equals "count" did not have an "includeRunning" key with a bool value'
+                    );
+                }
+
+                $completeFields = array();
+
+                if ($fieldSet['includeRunning']) {
+                    $completeFields['running'] = 1;
+                }
+
+                foreach ($fields as $key => $value) {
+                    if (!is_string($key)) {
+                        throw new \InvalidArgumentException('an array in $fieldSets had key in "fields" that was not a string');
+                    }
+
+                    if ($value !== 1 && $value !== -1) {
+                        throw new \InvalidArgumentException(
+                            'an array in $fieldSets had value of "fields" that is not 1 or -1 for ascending and descending'
+                        );
+                    }
+
+                    $completeFields["payload.{$key}"] = $value;
+                }
+
+                $potentialIndexes[] = $completeFields;
+                continue;
+            }
+        }
+
+        //TODO if any of the fields in an array in $toIndex is a prefix of another, remove it
+
+        foreach ($potentialIndexes as $potentialIndex) {
+            $this->_ensureIndex($potentialIndex);
+        }
+    }
+
+    /**
      * Get a non running message from the queue.
      *
      * @param array $query in same format as \MongoCollection::find() where top level fields do not contain operators.
