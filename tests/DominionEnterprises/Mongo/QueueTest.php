@@ -136,6 +136,21 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     */
+    public function ensureCountIndexWithPrefixOfPrevious()
+    {
+        $this->_queue->ensureCountIndex(array('type' => 1, 'boo' => -1), false);
+        $this->_queue->ensureCountIndex(array('type' => 1), false);
+
+        $this->assertSame(2, count($this->_collection->getIndexInfo()));
+
+        $expected = array('payload.type' => 1, 'payload.boo' => -1);
+        $result = $this->_collection->getIndexInfo();
+        $this->assertSame($expected, $result[1]['key']);
+    }
+
+    /**
+     * @test
      * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithNonStringKey()
@@ -305,6 +320,32 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->_queue->send($messageOne);
         $this->_queue->send($messageTwo);
         $this->_queue->send($messageThree);
+
+        $resultOne = $this->_queue->get(array(), PHP_INT_MAX, 0);
+        $resultTwo = $this->_queue->get(array(), PHP_INT_MAX, 0);
+        $resultThree = $this->_queue->get(array(), PHP_INT_MAX, 0);
+
+        $this->assertSame(array('id' => $resultOne['id']) + $messageOne, $resultOne);
+        $this->assertSame(array('id' => $resultTwo['id']) + $messageTwo, $resultTwo);
+        $this->assertSame(array('id' => $resultThree['id']) + $messageThree, $resultThree);
+    }
+
+    /**
+     * @test
+     */
+    public function getWithTimeBasedPriorityWithOldTimestamp()
+    {
+        $messageOne = array('key' => 0);
+        $messageTwo = array('key' => 1);
+        $messageThree = array('key' => 2);
+
+        $this->_queue->send($messageOne);
+        $this->_queue->send($messageTwo);
+        $this->_queue->send($messageThree);
+
+        $resultTwo = $this->_queue->get(array(), PHP_INT_MAX, 0);
+        //ensuring using old timestamp shouldn't affect normal time order of send()s
+        $this->_queue->requeue($resultTwo, 0, 0.0, false);
 
         $resultOne = $this->_queue->get(array(), PHP_INT_MAX, 0);
         $resultTwo = $this->_queue->get(array(), PHP_INT_MAX, 0);
@@ -497,6 +538,15 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     public function ackSendWithNonIntEarliestGet()
     {
         $this->_queue->ackSend(array('id' => new \MongoId()), array(), true);
+    }
+
+    /**
+     * @test
+     * @expectedException \InvalidArgumentException
+     */
+    public function ackSendWithNonBoolNewTimestamp()
+    {
+        $this->_queue->ackSend(array('id' => new \MongoId()), array(), 0, 0.0, 1);
     }
 
     /**

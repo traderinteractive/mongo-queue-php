@@ -104,6 +104,7 @@ final class Queue
 
     /**
      * Ensure an index for the count() method.
+     * Is a no-op if the generated index is a prefix of an existing one. If you have a similar ensureGetIndex call, call it first.
      *
      * @param array $fields fields in count() call to index in same format as \MongoCollection::ensureIndex()
      * @param bool $includeRunning whether to include the running field in the index
@@ -297,6 +298,7 @@ final class Queue
      * @param array $payload the data to store in the message to send. Data is handled same way as \MongoCollection::insert()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
+     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
      *
      * @return void
      *
@@ -304,8 +306,9 @@ final class Queue
      * @throws \InvalidArgumentException $earliestGet was not an int
      * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException $priority is NaN
+     * @throws \InvalidArgumentException $newTimestamp was not a bool
      */
-    public function ackSend(array $message, array $payload, $earliestGet = 0, $priority = 0.0)
+    public function ackSend(array $message, array $payload, $earliestGet = 0, $priority = 0.0, $newTimestamp = true)
     {
         $id = null;
         if (array_key_exists('id', $message)) {
@@ -328,23 +331,29 @@ final class Queue
             throw new \InvalidArgumentException('$priority was NaN');
         }
 
+        if ($newTimestamp !== true && $newTimestamp !== false) {
+            throw new \InvalidArgumentException('$newTimestamp was not a bool');
+        }
+
         if ($earliestGet > self::MONGO_INT32_MAX) {
             $earliestGet = self::MONGO_INT32_MAX;
         } elseif ($earliestGet < 0) {
             $earliestGet = 0;
         }
 
-        $newMessage = array(
+        $toSet = array(
             'payload' => $payload,
             'running' => false,
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
-            'created' => new \MongoDate(),
         );
+        if ($newTimestamp) {
+            $toSet['created'] = new \MongoDate();
+        }
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY) so we can just send
-        $this->_collection->update(array('_id' => $id), $newMessage, array('upsert' => true));
+        $this->_collection->update(array('_id' => $id), array('$set' => $toSet), array('upsert' => true));
     }
 
     /**
@@ -353,6 +362,7 @@ final class Queue
      * @param array $message message received from get().
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
+     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
      *
      * @return void
      *
@@ -360,12 +370,13 @@ final class Queue
      * @throws \InvalidArgumentException $earliestGet was not an int
      * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException priority is NaN
+     * @throws \InvalidArgumentException $newTimestamp was not a bool
      */
-    public function requeue(array $message, $earliestGet = 0, $priority = 0.0)
+    public function requeue(array $message, $earliestGet = 0, $priority = 0.0, $newTimestamp = true)
     {
         $forRequeue = $message;
         unset($forRequeue['id']);
-        $this->ackSend($message, $forRequeue, $earliestGet, $priority);
+        $this->ackSend($message, $forRequeue, $earliestGet, $priority, $newTimestamp);
     }
 
     /**
@@ -415,6 +426,7 @@ final class Queue
 
     /**
      * Ensure index of correct specification and a unique name whether the specification or name already exist or not.
+     * Will not create index if $index is a prefix of an existing index
      *
      * @param array $index index to create in same format as \MongoCollection::ensureIndex()
      *
@@ -424,6 +436,14 @@ final class Queue
      */
     private function _ensureIndex(array $index)
     {
+        //if $index is a prefix of any existing index we are good
+        foreach ($this->_collection->getIndexInfo() as $existingIndex) {
+            $slice = array_slice($existingIndex['key'], 0, count($index), true);
+            if ($slice === $index) {
+                return;
+            }
+        }
+
         for ($i = 0; $i < 5; ++$i) {
             for ($name = uniqid(); strlen($name) > 0; $name = substr($name, 0, -1)) {
                 //creating an index with same name and different spec does nothing.
