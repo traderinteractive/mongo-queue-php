@@ -136,6 +136,21 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     */
+    public function ensureCountIndexWithPrefixOfPrevious()
+    {
+        $this->_queue->ensureCountIndex(array('type' => 1, 'boo' => -1), false);
+        $this->_queue->ensureCountIndex(array('type' => 1), false);
+
+        $this->assertSame(2, count($this->_collection->getIndexInfo()));
+
+        $expected = array('payload.type' => 1, 'payload.boo' => -1);
+        $result = $this->_collection->getIndexInfo();
+        $this->assertSame($expected, $result[1]['key']);
+    }
+
+    /**
+     * @test
      * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithNonStringKey()

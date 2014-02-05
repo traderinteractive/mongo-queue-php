@@ -104,6 +104,7 @@ final class Queue
 
     /**
      * Ensure an index for the count() method.
+     * Is a no-op if the generated index is a prefix of an existing one. If you have a similar ensureGetIndex call, call it first.
      *
      * @param array $fields fields in count() call to index in same format as \MongoCollection::ensureIndex()
      * @param bool $includeRunning whether to include the running field in the index
@@ -425,6 +426,7 @@ final class Queue
 
     /**
      * Ensure index of correct specification and a unique name whether the specification or name already exist or not.
+     * Will not create index if $index is a prefix of an existing index
      *
      * @param array $index index to create in same format as \MongoCollection::ensureIndex()
      *
@@ -434,6 +436,14 @@ final class Queue
      */
     private function _ensureIndex(array $index)
     {
+        //if $index is a prefix of any existing index we are good
+        foreach ($this->_collection->getIndexInfo() as $existingIndex) {
+            $slice = array_slice($existingIndex['key'], 0, count($index), true);
+            if ($slice === $index) {
+                return;
+            }
+        }
+
         for ($i = 0; $i < 5; ++$i) {
             for ($name = uniqid(); strlen($name) > 0; $name = substr($name, 0, -1)) {
                 //creating an index with same name and different spec does nothing.
