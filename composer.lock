@@ -3,9 +3,136 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "d22815b74988a0942fd2d612b308891f",
+    "hash": "de0f50079864cd01aba04373daedcbfa",
     "packages": [
-
+        {
+            "name": "koubas/mongofill",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/koubas/mongofill.git",
+                "reference": "0d86a58d6978d0774053026f98707e78c099f46d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/koubas/mongofill/zipball/0d86a58d6978d0774053026f98707e78c099f46d",
+                "reference": "0d86a58d6978d0774053026f98707e78c099f46d",
+                "shasum": ""
+            },
+            "require-dev": {
+                "athletic/athletic": "dev-master"
+            },
+            "type": "library",
+            "autoload": {
+                "classmap": [
+                    {
+                        "Mongofill": "src/"
+                    },
+                    {
+                        "Mongo": "src/Mongo.php"
+                    },
+                    {
+                        "MongoBinData": "src/MongoBinData.php"
+                    },
+                    {
+                        "MongoClient": "src/MongoClient.php"
+                    },
+                    {
+                        "MongoCode": "src/MongoCode.php"
+                    },
+                    {
+                        "MongoCollection": "src/MongoCollection.php"
+                    },
+                    {
+                        "MongoConnectionException": "src/MongoConnectionException.php"
+                    },
+                    {
+                        "MongoCursor": "src/MongoCursor.php"
+                    },
+                    {
+                        "MongoCursorException": "src/MongoCursorException.php"
+                    },
+                    {
+                        "MongoCursorTimeoutException": "src/MongoCursorTimeoutException.php"
+                    },
+                    {
+                        "MongoDB": "src/MongoDB.php"
+                    },
+                    {
+                        "MongoDBRef": "src/MongoDBRef.php"
+                    },
+                    {
+                        "MongoDate": "src/MongoDate.php"
+                    },
+                    {
+                        "MongoException": "src/MongoException.php"
+                    },
+                    {
+                        "MongoGridFS": "src/MongoGridFS.php"
+                    },
+                    {
+                        "MongoGridFSFile": "src/MongoGridFSFile.php"
+                    },
+                    {
+                        "MongoGridFSException": "src/MongoGridFSException.php"
+                    },
+                    {
+                        "MongoGridFSCursor": "src/MongoGridFSCursor.php"
+                    },
+                    {
+                        "MongoId": "src/MongoId.php"
+                    },
+                    {
+                        "MongoInt32": "src/MongoInt32.php"
+                    },
+                    {
+                        "MongoInt64": "src/MongoInt64.php"
+                    },
+                    {
+                        "MongoLog": "src/MongoLog.php"
+                    },
+                    {
+                        "MongoMaxKey": "src/MongoMaxKey.php"
+                    },
+                    {
+                        "MongoMinKey": "src/MongoMinKey.php"
+                    },
+                    {
+                        "MongoRegex": "src/MongoRegex.php"
+                    },
+                    {
+                        "MongoResultException": "src/MongoResultException.php"
+                    },
+                    {
+                        "MongoTimestamp": "src/MongoTimestamp.php"
+                    }
+                ],
+                "files": [
+                    "src/functions.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Máximo Cuadros",
+                    "email": "mcuadros@gmail.com",
+                    "homepage": "https://github.com/mcuadros"
+                },
+                {
+                    "name": "Jakub Husák",
+                    "email": "husak.j@gmail.com"
+                },
+                {
+                    "name": "Mongofill Community",
+                    "homepage": "https://github.com/koubas/mongofill/graphs/contributors"
+                }
+            ],
+            "description": "Polyfill of PECL Mongo extension",
+            "time": "2014-03-24 17:00:26"
+        }
     ],
     "packages-dev": [
         {
@@ -551,12 +678,11 @@
 
     ],
     "minimum-stability": "stable",
-    "stability-flags": [
-
-    ],
+    "stability-flags": {
+        "koubas/mongofill": 20
+    },
     "platform": {
-        "php": ">=5.3.2",
-        "ext-mongo": "~1.3"
+        "php": ">=5.3.2"
     },
     "platform-dev": {
         "lib-libxml": "*"
