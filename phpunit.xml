@@ -1,4 +1,4 @@
-<phpunit>
+<phpunit forceCoversAnnotation="true">
     <filter>
         <whitelist>
             <directory>src</directory>
