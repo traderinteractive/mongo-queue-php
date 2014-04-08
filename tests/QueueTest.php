@@ -2,6 +2,10 @@
 
 namespace DominionEnterprises\Mongo;
 
+/**
+ * @coversDefaultClass \DominionEnterprises\Mongo\Queue
+ * @covers ::<private>
+ */
 final class QueueTest extends \PHPUnit_Framework_TestCase
 {
     private $_collection;
@@ -18,6 +22,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::__construct
      * @expectedException \InvalidArgumentException
      */
     public function constructWithNonStringUrl()
@@ -27,6 +32,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::__construct
      * @expectedException \InvalidArgumentException
      */
     public function constructWithNonStringDb()
@@ -36,6 +42,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::__construct
      * @expectedException \InvalidArgumentException
      */
     public function constructWithNonStringCollection()
@@ -45,6 +52,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureGetIndex
      */
     public function ensureGetIndex()
     {
@@ -68,6 +76,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureGetIndex
      * @expectedException \Exception
      */
     public function ensureGetIndexWithTooLongCollectionName()
@@ -81,6 +90,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureGetIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithNonStringBeforeSortKey()
@@ -90,6 +100,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureGetIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithNonStringAfterSortKey()
@@ -99,6 +110,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureGetIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithBadBeforeSortValue()
@@ -108,6 +120,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureGetIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithBadAfterSortValue()
@@ -117,6 +130,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureCountIndex
      */
     public function ensureCountIndex()
     {
@@ -136,6 +150,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureCountIndex
      */
     public function ensureCountIndexWithPrefixOfPrevious()
     {
@@ -151,6 +166,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureCountIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithNonStringKey()
@@ -160,6 +176,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureCountIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithBadValue()
@@ -169,6 +186,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ensureCountIndex
      * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithNonBoolIncludeRunning()
@@ -178,6 +196,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getByBadQuery()
     {
@@ -191,6 +210,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      * @expectedException \InvalidArgumentException
      */
     public function getWithNonIntWaitDuration()
@@ -200,6 +220,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      * @expectedException \InvalidArgumentException
      */
     public function getWithNonIntPollDuration()
@@ -209,6 +230,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getWithNegativePollDuration()
     {
@@ -218,6 +240,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      * @expectedException \InvalidArgumentException
      */
     public function getWithNonStringKey()
@@ -227,6 +250,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      * @expectedException \InvalidArgumentException
      */
     public function getWithNonIntRunningResetDuration()
@@ -236,6 +260,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getByFullQuery()
     {
@@ -254,6 +279,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getBySubDocQuery()
     {
@@ -271,6 +297,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getBeforeAck()
     {
@@ -288,6 +315,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getWithCustomPriority()
     {
@@ -310,6 +338,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getWithTimeBasedPriority()
     {
@@ -332,6 +361,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getWithTimeBasedPriorityWithOldTimestamp()
     {
@@ -358,6 +388,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function getWait()
     {
@@ -373,6 +404,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function earliestGet()
     {
@@ -389,6 +421,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::get
      */
     public function resetStuck()
     {
@@ -415,6 +448,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::count
      * @expectedException \InvalidArgumentException
      */
     public function countWithNonNullOrBoolRunning()
@@ -424,6 +458,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::count
      * @expectedException \InvalidArgumentException
      */
     public function countWithNonStringKey()
@@ -433,6 +468,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::count
      */
     public function testCount()
     {
@@ -455,6 +491,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ack
      */
     public function ack()
     {
@@ -472,6 +509,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ack
      * @expectedException \InvalidArgumentException
      */
     public function ackBadArg()
@@ -481,6 +519,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      */
     public function ackSend()
     {
@@ -506,6 +545,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function ackSendWithWrongIdType()
@@ -515,6 +555,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function ackSendWithNanPriority()
@@ -524,6 +565,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function ackSendWithNonFloatPriority()
@@ -533,6 +575,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function ackSendWithNonIntEarliestGet()
@@ -542,6 +585,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function ackSendWithNonBoolNewTimestamp()
@@ -551,6 +595,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      */
     public function ackSendWithHighEarliestGet()
     {
@@ -581,6 +626,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::ackSend
      */
     public function ackSendWithLowEarliestGet()
     {
@@ -611,6 +657,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::requeue
      */
     public function requeue()
     {
@@ -630,6 +677,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::requeue
      * @expectedException \InvalidArgumentException
      */
     public function requeueBadArg()
@@ -639,6 +687,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::send
      */
     public function send()
     {
@@ -667,6 +716,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::send
      * @expectedException \InvalidArgumentException
      */
     public function sendWithNanPriority()
@@ -676,6 +726,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::send
      * @expectedException \InvalidArgumentException
      */
     public function sendWithNonIntegerEarliestGet()
@@ -685,6 +736,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::send
      * @expectedException \InvalidArgumentException
      */
     public function sendWithNonFloatPriority()
@@ -694,6 +746,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::send
      */
     public function sendWithHighEarliestGet()
     {
@@ -721,6 +774,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
+     * @covers ::send
      */
     public function sendWithLowEarliestGet()
     {
