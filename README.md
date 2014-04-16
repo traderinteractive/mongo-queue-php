@@ -41,7 +41,7 @@ To add the library as a local, per-project dependency use [Composer](http://getc
 
 ##Documentation
 
-Found in the [source](src/Mongo/Queue.php) itself, take a look!
+Found in the [source](src/Queue.php) itself, take a look!
 
 ##Contact
 
