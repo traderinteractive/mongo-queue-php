@@ -215,8 +215,8 @@ final class Queue
 
         while (true) {
             $message = $this->_collection->findAndModify($completeQuery, $update, $fields, $options);
-            //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query
-            if (array_key_exists('_id', $message)) {
+            //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query on older mongo extension
+            if ($message !== null && array_key_exists('_id', $message)) {
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
                 return array('id' => $message['_id']) + $message['payload'];
             }
@@ -452,7 +452,7 @@ final class Queue
 
                 try {
                     $this->_collection->ensureIndex($index, array('name' => $name, 'background' => true));
-                } catch (\MongoCursorException $e) {
+                } catch (\MongoException $e) {
                     //this happens when the name was too long, let continue
                 }
 
