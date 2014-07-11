@@ -9,15 +9,17 @@ namespace DominionEnterprises\Mongo;
 final class QueueTest extends \PHPUnit_Framework_TestCase
 {
     private $_collection;
+    private $_mongoUrl;
     private $_queue;
 
     public function setUp()
     {
-        $mongo = new \MongoClient('mongodb://localhost');
+        $this->_mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
+        $mongo = new \MongoClient($this->_mongoUrl);
         $this->_collection = $mongo->selectDB('testing')->selectCollection('messages');
         $this->_collection->drop();
 
-        $this->_queue = new Queue('mongodb://localhost', 'testing', 'messages');
+        $this->_queue = new Queue($this->_mongoUrl, 'testing', 'messages');
     }
 
     /**
@@ -37,7 +39,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function constructWithNonStringDb()
     {
-        new Queue('mongodb://localhost', true, 'messages');
+        new Queue($this->_mongoUrl, true, 'messages');
     }
 
     /**
@@ -47,7 +49,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function constructWithNonStringCollection()
     {
-        new Queue('mongodb://localhost', 'testing', new \stdClass());
+        new Queue($this->_mongoUrl, 'testing', new \stdClass());
     }
 
     /**
@@ -84,7 +86,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $collectionName = 'messages012345678901234567890123456789012345678901234567890123456789';
         $collectionName .= '012345678901234567890123456789012345678901234567890123456789';//128 chars
 
-        $queue = new Queue('mongodb://localhost', 'testing', $collectionName);
+        $queue = new Queue($this->_mongoUrl, 'testing', $collectionName);
         $queue->ensureGetIndex(array());
     }
 
