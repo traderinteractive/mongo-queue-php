@@ -10,6 +10,7 @@ ADD provisioning/set-env.sh /set-env.sh
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 VOLUME ["/code"]
+WORKDIR /code
 
 ENTRYPOINT ["/set-env.sh"]
 CMD ["/code/build.php"]
