@@ -1,5 +1,8 @@
 #mongo-queue-php
 [![Build Status](http://img.shields.io/travis/dominionenterprises/mongo-queue-php.svg?style=flat)](https://travis-ci.org/dominionenterprises/mongo-queue-php)
+[![Latest Stable Version](http://img.shields.io/packagist/v/dominionenterprises/mongo-queue-php.svg?style=flat)](https://packagist.org/packages/dominionenterprises/mongo-queue-php)
+[![Total Downloads](http://img.shields.io/packagist/dt/dominionenterprises/mongo-queue-php.svg?style=flat)](https://packagist.org/packages/dominionenterprises/mongo-queue-php)
+[![License](http://img.shields.io/packagist/l/dominionenterprises/mongo-queue-php.svg?style=flat)](https://packagist.org/packages/dominionenterprises/mongo-queue-php)
 
 PHP message queue using MongoDB as a backend.
 Adheres to the 1.0.0 [specification](https://github.com/dominionenterprises/mongo-queue-specification).
