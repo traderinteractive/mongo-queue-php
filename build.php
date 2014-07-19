@@ -3,7 +3,7 @@
 chdir(__DIR__);
 
 $returnStatus = null;
-passthru('composer install --dev', $returnStatus);
+passthru('composer install', $returnStatus);
 if ($returnStatus !== 0) {
     exit(1);
 }
