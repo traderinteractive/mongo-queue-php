@@ -1,5 +1,5 @@
 #mongo-queue-php
-[![Build Status](https://travis-ci.org/dominionenterprises/mongo-queue-php.png)](https://travis-ci.org/dominionenterprises/mongo-queue-php)
+[![Build Status](http://img.shields.io/travis/dominionenterprises/mongo-queue-php.svg?style=flat)](https://travis-ci.org/dominionenterprises/mongo-queue-php)
 
 PHP message queue using MongoDB as a backend.
 Adheres to the 1.0.0 [specification](https://github.com/dominionenterprises/mongo-queue-specification).
