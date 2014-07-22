@@ -5,6 +5,7 @@ namespace DominionEnterprises\Mongo;
 /**
  * @coversDefaultClass \DominionEnterprises\Mongo\Queue
  * @covers ::<private>
+ * @uses \DominionEnterprises\Mongo\Queue::__construct
  */
 final class QueueTest extends \PHPUnit_Framework_TestCase
 {
@@ -199,6 +200,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getByBadQuery()
     {
@@ -233,6 +235,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getWithNegativePollDuration()
     {
@@ -263,6 +266,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getByFullQuery()
     {
@@ -282,6 +286,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getBySubDocQuery()
     {
@@ -300,6 +305,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getBeforeAck()
     {
@@ -318,6 +324,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getWithCustomPriority()
     {
@@ -341,6 +348,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getWithTimeBasedPriority()
     {
@@ -364,6 +372,9 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
+     * @uses \DominionEnterprises\Mongo\Queue::ackSend
+     * @uses \DominionEnterprises\Mongo\Queue::requeue
      */
     public function getWithTimeBasedPriorityWithOldTimestamp()
     {
@@ -407,6 +418,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function earliestGet()
     {
@@ -424,6 +436,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function resetStuck()
     {
@@ -471,6 +484,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::count
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function testCount()
     {
@@ -494,6 +509,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ack
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ack()
     {
@@ -522,6 +539,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ackSend
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ackSend()
     {
@@ -598,6 +617,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ackSend
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ackSendWithHighEarliestGet()
     {
@@ -629,6 +650,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ackSend
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ackSendWithLowEarliestGet()
     {
@@ -660,6 +683,9 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::requeue
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::ackSend
+     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function requeue()
     {
@@ -680,6 +706,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::requeue
+     * @uses \DominionEnterprises\Mongo\Queue::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function requeueBadArg()
