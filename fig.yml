@@ -1,0 +1,8 @@
+build:
+  build: .
+  links:
+    - mongo
+  volumes:
+    - .:/code
+mongo:
+  image: mongo
