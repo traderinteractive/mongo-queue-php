@@ -53,11 +53,20 @@ Developers may be contacted at:
  * [Pull Requests](https://github.com/dominionenterprises/mongo-queue-php/pulls)
  * [Issues](https://github.com/dominionenterprises/mongo-queue-php/issues)
 
-##Tests
+##Contributing
 
-Install and start [mongodb](http://www.mongodb.org).
-With a checkout of the code get [Composer](http://getcomposer.org) in your PATH and run:
+If you would like to contribute, please use our build process for any changes
+and after the build passes, send us a pull request on github!  The build
+requires a running mongo.  The URI to mongo can be specified via an environment
+variable or left to its default (localhost on the default port, 27017):
+```sh
+TESTING_MONGO_URL=mongodb://127.0.0.1:27017 ./build.php
+```
 
-```bash
-php build.php
+There is also a [docker](http://www.docker.com/)-based
+[fig](http://www.fig.sh/) configuration that will standup a docker container
+for the database, execute the build inside a docker container, and then
+terminate everything.  This is an easy way to build the application:
+```sh
+fig run build
 ```
