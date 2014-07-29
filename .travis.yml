@@ -13,6 +13,7 @@ before_install:
   - "sudo apt-get update"
   - "sudo apt-get install ${DB_PACKAGE}"
 before_script:
+  - composer self-update
   - yes '' | pecl install -f mongo-${EXT_VERSION}
     # wait for mongo, start is only needed for 2.4 package, see http://tldp.org/LDP/abs/html/devref1.html for description of this syntax.
   - sudo service mongodb start; bash -c 'while ! exec 6<>/dev/tcp/localhost/27017; do echo "$(date) - still trying to connect to mongo"; sleep 1; done'
