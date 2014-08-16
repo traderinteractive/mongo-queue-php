@@ -61,10 +61,10 @@ final class Queue
      * @throws \InvalidArgumentException value of $beforeSort or $afterSort is not 1 or -1 for ascending and descending
      * @throws \InvalidArgumentException key in $beforeSort or $afterSort was not a string
      */
-    public function ensureGetIndex(array $beforeSort = array(), array $afterSort = array())
+    public function ensureGetIndex(array $beforeSort = [], array $afterSort = [])
     {
         //using general rule: equality, sort, range or more equality tests in that order for index
-        $completeFields = array('running' => 1);
+        $completeFields = ['running' => 1];
 
         foreach ($beforeSort as $key => $value) {
             if (!is_string($key)) {
@@ -99,7 +99,7 @@ final class Queue
         $this->_ensureIndex($completeFields);
 
         //for the stuck messages query in get()
-        $this->_ensureIndex(array('running' => 1, 'resetTimestamp' => 1));
+        $this->_ensureIndex(['running' => 1, 'resetTimestamp' => 1]);
     }
 
     /**
@@ -121,7 +121,7 @@ final class Queue
             throw new \InvalidArgumentException('$includeRunning was not a boolean');
         }
 
-        $completeFields = array();
+        $completeFields = [];
 
         if ($includeRunning) {
             $completeFields['running'] = 1;
@@ -176,12 +176,12 @@ final class Queue
 
         //reset stuck messages
         $this->_collection->update(
-            array('running' => true, 'resetTimestamp' => array('$lte' => new \MongoDate())),
-            array('$set' => array('running' => false)),
-            array('multiple' => true)
+            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]],
+            ['$set' => ['running' => false]],
+            ['multiple' => true]
         );
 
-        $completeQuery = array('running' => false);
+        $completeQuery = ['running' => false];
         foreach ($query as $key => $value) {
             if (!is_string($key)) {
                 throw new \InvalidArgumentException('key in $query was not a string');
@@ -190,7 +190,7 @@ final class Queue
             $completeQuery["payload.{$key}"] = $value;
         }
 
-        $completeQuery['earliestGet'] = array('$lte' => new \MongoDate());
+        $completeQuery['earliestGet'] = ['$lte' => new \MongoDate()];
 
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats
@@ -198,9 +198,9 @@ final class Queue
             $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
         }
 
-        $update = array('$set' => array('resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true));
-        $fields = array('payload' => 1);
-        $options = array('sort' => array('priority' => 1, 'created' => 1));
+        $update = ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true]];
+        $fields = ['payload' => 1];
+        $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
         //ints overflow to floats, should be fine
         $end = microtime(true) + ($waitDurationInMillis / 1000.0);
@@ -218,7 +218,7 @@ final class Queue
             //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query on older mongo extension
             if ($message !== null && array_key_exists('_id', $message)) {
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
-                return array('id' => $message['_id']) + $message['payload'];
+                return ['id' => $message['_id']] + $message['payload'];
             }
 
             if (microtime(true) >= $end) {
@@ -251,7 +251,7 @@ final class Queue
             throw new \InvalidArgumentException('$running was not null and not a bool');
         }
 
-        $totalQuery = array();
+        $totalQuery = [];
 
         if ($running !== null) {
             $totalQuery['running'] = $running;
@@ -288,7 +288,7 @@ final class Queue
             throw new \InvalidArgumentException('$message does not have a field "id" that is a MongoId');
         }
 
-        $this->_collection->remove(array('_id' => $id));
+        $this->_collection->remove(['_id' => $id]);
     }
 
     /**
@@ -341,19 +341,19 @@ final class Queue
             $earliestGet = 0;
         }
 
-        $toSet = array(
+        $toSet = [
             'payload' => $payload,
             'running' => false,
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
-        );
+        ];
         if ($newTimestamp) {
             $toSet['created'] = new \MongoDate();
         }
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY) so we can just send
-        $this->_collection->update(array('_id' => $id), array('$set' => $toSet), array('upsert' => true));
+        $this->_collection->update(['_id' => $id], ['$set' => $toSet], ['upsert' => true]);
     }
 
     /**
@@ -412,14 +412,14 @@ final class Queue
             $earliestGet = 0;
         }
 
-        $message = array(
+        $message = [
             'payload' => $payload,
             'running' => false,
             'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
             'created' => new \MongoDate(),
-        );
+        ];
 
         $this->_collection->insert($message);
     }
@@ -451,7 +451,7 @@ final class Queue
                 //so we use any generated name, and then find the right spec after we have called, and just go with that name.
 
                 try {
-                    $this->_collection->ensureIndex($index, array('name' => $name, 'background' => true));
+                    $this->_collection->ensureIndex($index, ['name' => $name, 'background' => true]);
                 } catch (\MongoException $e) {
                     //this happens when the name was too long, let continue
                 }

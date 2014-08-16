@@ -11,18 +11,18 @@ if ($returnStatus !== 0) {
 require 'vendor/autoload.php';
 
 $phpcsCLI = new PHP_CodeSniffer_CLI();
-$phpcsArguments = array(
-    'standard' => array(__DIR__ . '/vendor/dominionenterprises/dws-coding-standard/DWS'),
-    'files' => array('src', 'tests', 'build.php'),
+$phpcsArguments = [
+    'standard' => [__DIR__ . '/vendor/dominionenterprises/dws-coding-standard/DWS'],
+    'files' => ['src', 'tests', 'build.php'],
     'warningSeverity' => 0,
-);
+];
 $phpcsViolations = $phpcsCLI->process($phpcsArguments);
 if ($phpcsViolations > 0) {
     exit(1);
 }
 
 $phpunitConfiguration = PHPUnit_Util_Configuration::getInstance(__DIR__ . '/phpunit.xml');
-$phpunitArguments = array('coverageHtml' => __DIR__ . '/coverage', 'configuration' => $phpunitConfiguration);
+$phpunitArguments = ['coverageHtml' => __DIR__ . '/coverage', 'configuration' => $phpunitConfiguration];
 $testRunner = new PHPUnit_TextUI_TestRunner();
 $result = $testRunner->doRun($phpunitConfiguration->getTestSuiteConfiguration(), $phpunitArguments);
 if (!$result->wasSuccessful()) {
