@@ -29,6 +29,9 @@ if (!$result->wasSuccessful()) {
     exit(1);
 }
 
+$cloverCoverage = new PHP_CodeCoverage_Report_Clover();
+file_put_contents('clover.xml', $cloverCoverage->process($result->getCodeCoverage()));
+
 $coverageFactory = new PHP_CodeCoverage_Report_Factory();
 $coverageReport = $coverageFactory->create($result->getCodeCoverage());
 if ($coverageReport->getNumExecutedLines() !== $coverageReport->getNumExecutableLines()) {
