@@ -11,7 +11,7 @@ namespace DominionEnterprises\Mongo;
  * Tied priorities are ordered by time. So you may use a single priority for normal queuing (default args exist for
  * this purpose).  Using a random priority achieves random get()
  */
-final class Queue
+final class Queue implements QueueInterface
 {
     const MONGO_INT32_MAX = 2147483647;//2147483648 can overflow in php mongo without using the MongoInt64
 
