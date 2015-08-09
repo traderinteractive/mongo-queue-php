@@ -9,18 +9,18 @@ namespace DominionEnterprises\Mongo;
  */
 final class QueueTest extends \PHPUnit_Framework_TestCase
 {
-    private $_collection;
-    private $_mongoUrl;
-    private $_queue;
+    private $collection;
+    private $mongoUrl;
+    private $queue;
 
     public function setUp()
     {
-        $this->_mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
-        $mongo = new \MongoClient($this->_mongoUrl);
-        $this->_collection = $mongo->selectDB('testing')->selectCollection('messages');
-        $this->_collection->drop();
+        $this->mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
+        $mongo = new \MongoClient($this->mongoUrl);
+        $this->collection = $mongo->selectDB('testing')->selectCollection('messages');
+        $this->collection->drop();
 
-        $this->_queue = new Queue($this->_mongoUrl, 'testing', 'messages');
+        $this->queue = new Queue($this->mongoUrl, 'testing', 'messages');
     }
 
     /**
@@ -40,7 +40,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function constructWithNonStringDb()
     {
-        new Queue($this->_mongoUrl, true, 'messages');
+        new Queue($this->mongoUrl, true, 'messages');
     }
 
     /**
@@ -50,7 +50,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function constructWithNonStringCollection()
     {
-        new Queue($this->_mongoUrl, 'testing', new \stdClass());
+        new Queue($this->mongoUrl, 'testing', new \stdClass());
     }
 
     /**
@@ -59,21 +59,34 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureGetIndex()
     {
-        $this->_queue->ensureGetIndex(['type' => 1], ['boo' => -1]);
-        $this->_queue->ensureGetIndex(['another.sub' => 1]);
+        $this->queue->ensureGetIndex(['type' => 1], ['boo' => -1]);
+        $this->queue->ensureGetIndex(['another.sub' => 1]);
 
-        $this->assertSame(4, count($this->_collection->getIndexInfo()));
+        $this->assertSame(4, count($this->collection->getIndexInfo()));
 
-        $expectedOne = ['running' => 1, 'payload.type' => 1, 'priority' => 1, 'created' => 1, 'payload.boo' => -1, 'earliestGet' => 1];
-        $resultOne = $this->_collection->getIndexInfo();
+        $expectedOne = [
+            'running' => 1,
+            'payload.type' => 1,
+            'priority' => 1,
+            'created' => 1,
+            'payload.boo' => -1,
+            'earliestGet' => 1
+        ];
+        $resultOne = $this->collection->getIndexInfo();
         $this->assertSame($expectedOne, $resultOne[1]['key']);
 
         $expectedTwo = ['running' => 1, 'resetTimestamp' => 1];
-        $resultTwo = $this->_collection->getIndexInfo();
+        $resultTwo = $this->collection->getIndexInfo();
         $this->assertSame($expectedTwo, $resultTwo[2]['key']);
 
-        $expectedThree = ['running' => 1, 'payload.another.sub' => 1, 'priority' => 1, 'created' => 1, 'earliestGet' => 1];
-        $resultThree = $this->_collection->getIndexInfo();
+        $expectedThree = [
+            'running' => 1,
+            'payload.another.sub' => 1,
+            'priority' => 1,
+            'created' => 1,
+            'earliestGet' => 1
+        ];
+        $resultThree = $this->collection->getIndexInfo();
         $this->assertSame($expectedThree, $resultThree[3]['key']);
     }
 
@@ -87,7 +100,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $collectionName = 'messages012345678901234567890123456789012345678901234567890123456789';
         $collectionName .= '012345678901234567890123456789012345678901234567890123456789';//128 chars
 
-        $queue = new Queue($this->_mongoUrl, 'testing', $collectionName);
+        $queue = new Queue($this->mongoUrl, 'testing', $collectionName);
         $queue->ensureGetIndex([]);
     }
 
@@ -98,7 +111,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureGetIndexWithNonStringBeforeSortKey()
     {
-        $this->_queue->ensureGetIndex([0 => 1]);
+        $this->queue->ensureGetIndex([0 => 1]);
     }
 
     /**
@@ -108,7 +121,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureGetIndexWithNonStringAfterSortKey()
     {
-        $this->_queue->ensureGetIndex(['field' => 1], [0 => 1]);
+        $this->queue->ensureGetIndex(['field' => 1], [0 => 1]);
     }
 
     /**
@@ -118,7 +131,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureGetIndexWithBadBeforeSortValue()
     {
-        $this->_queue->ensureGetIndex(['field' => 'NotAnInt']);
+        $this->queue->ensureGetIndex(['field' => 'NotAnInt']);
     }
 
     /**
@@ -128,7 +141,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureGetIndexWithBadAfterSortValue()
     {
-        $this->_queue->ensureGetIndex([], ['field' => 'NotAnInt']);
+        $this->queue->ensureGetIndex([], ['field' => 'NotAnInt']);
     }
 
     /**
@@ -137,17 +150,17 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureCountIndex()
     {
-        $this->_queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
-        $this->_queue->ensureCountIndex(['another.sub' => 1], true);
+        $this->queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
+        $this->queue->ensureCountIndex(['another.sub' => 1], true);
 
-        $this->assertSame(3, count($this->_collection->getIndexInfo()));
+        $this->assertSame(3, count($this->collection->getIndexInfo()));
 
         $expectedOne = ['payload.type' => 1, 'payload.boo' => -1];
-        $resultOne = $this->_collection->getIndexInfo();
+        $resultOne = $this->collection->getIndexInfo();
         $this->assertSame($expectedOne, $resultOne[1]['key']);
 
         $expectedTwo = ['running' => 1, 'payload.another.sub' => 1];
-        $resultTwo = $this->_collection->getIndexInfo();
+        $resultTwo = $this->collection->getIndexInfo();
         $this->assertSame($expectedTwo, $resultTwo[2]['key']);
     }
 
@@ -157,13 +170,13 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureCountIndexWithPrefixOfPrevious()
     {
-        $this->_queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
-        $this->_queue->ensureCountIndex(['type' => 1], false);
+        $this->queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
+        $this->queue->ensureCountIndex(['type' => 1], false);
 
-        $this->assertSame(2, count($this->_collection->getIndexInfo()));
+        $this->assertSame(2, count($this->collection->getIndexInfo()));
 
         $expected = ['payload.type' => 1, 'payload.boo' => -1];
-        $result = $this->_collection->getIndexInfo();
+        $result = $this->collection->getIndexInfo();
         $this->assertSame($expected, $result[1]['key']);
     }
 
@@ -174,7 +187,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureCountIndexWithNonStringKey()
     {
-        $this->_queue->ensureCountIndex([0 => 1], false);
+        $this->queue->ensureCountIndex([0 => 1], false);
     }
 
     /**
@@ -184,7 +197,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureCountIndexWithBadValue()
     {
-        $this->_queue->ensureCountIndex(['field' => 'NotAnInt'], false);
+        $this->queue->ensureCountIndex(['field' => 'NotAnInt'], false);
     }
 
     /**
@@ -194,7 +207,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ensureCountIndexWithNonBoolIncludeRunning()
     {
-        $this->_queue->ensureCountIndex(['field' => 1], 1);
+        $this->queue->ensureCountIndex(['field' => 1], 1);
     }
 
     /**
@@ -204,12 +217,12 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getByBadQuery()
     {
-        $this->_queue->send(['key1' => 0, 'key2' => true]);
+        $this->queue->send(['key1' => 0, 'key2' => true]);
 
-        $result = $this->_queue->get(['key3' => 0], PHP_INT_MAX, 0);
+        $result = $this->queue->get(['key3' => 0], PHP_INT_MAX, 0);
         $this->assertNull($result);
 
-        $this->assertSame(1, $this->_collection->count());
+        $this->assertSame(1, $this->collection->count());
     }
 
     /**
@@ -219,7 +232,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getWithNonIntWaitDuration()
     {
-        $this->_queue->get([], 0, 'NotAnInt');
+        $this->queue->get([], 0, 'NotAnInt');
     }
 
     /**
@@ -229,7 +242,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getWithNonIntPollDuration()
     {
-        $this->_queue->get([], 0, 0, new \stdClass());
+        $this->queue->get([], 0, 0, new \stdClass());
     }
 
     /**
@@ -239,8 +252,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getWithNegativePollDuration()
     {
-        $this->_queue->send(['key1' => 0]);
-        $this->assertNotNull($this->_queue->get([], 0, 0, -1));
+        $this->queue->send(['key1' => 0]);
+        $this->assertNotNull($this->queue->get([], 0, 0, -1));
     }
 
     /**
@@ -250,7 +263,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getWithNonStringKey()
     {
-        $this->_queue->get([0 => 'a value'], 0);
+        $this->queue->get([0 => 'a value'], 0);
     }
 
     /**
@@ -260,7 +273,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getWithNonIntRunningResetDuration()
     {
-        $this->_queue->get([], true);
+        $this->queue->get([], true);
     }
 
     /**
@@ -272,10 +285,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $messageOne = ['id' => 'SHOULD BE REMOVED', 'key1' => 0, 'key2' => true];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send(['key' => 'value']);
+        $this->queue->send($messageOne);
+        $this->queue->send(['key' => 'value']);
 
-        $result = $this->_queue->get($messageOne, PHP_INT_MAX, 0);
+        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
 
         $this->assertNotSame($messageOne['id'], $result['id']);
 
@@ -290,12 +303,21 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function getBySubDocQuery()
     {
-        $messageTwo = ['one' => ['two' => ['three' => 5, 'notused' => 'notused'], 'notused' => 'notused'], 'notused' => 'notused'];
+        $messageTwo = [
+            'one' => [
+                'two' => [
+                    'three' => 5,
+                    'notused' => 'notused',
+                ],
+                'notused' => 'notused',
+            ],
+            'notused' => 'notused',
+        ];
 
-        $this->_queue->send(['key1' => 0, 'key2' => true]);
-        $this->_queue->send($messageTwo);
+        $this->queue->send(['key1' => 0, 'key2' => true]);
+        $this->queue->send($messageTwo);
 
-        $result = $this->_queue->get(['one.two.three' => ['$gt' => 4]], PHP_INT_MAX, 0);
+        $result = $this->queue->get(['one.two.three' => ['$gt' => 4]], PHP_INT_MAX, 0);
         $this->assertSame(['id' => $result['id']] + $messageTwo, $result);
     }
 
@@ -308,13 +330,13 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $messageOne = ['key1' => 0, 'key2' => true];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send(['key' => 'value']);
+        $this->queue->send($messageOne);
+        $this->queue->send(['key' => 'value']);
 
-        $this->_queue->get($messageOne, PHP_INT_MAX, 0);
+        $this->queue->get($messageOne, PHP_INT_MAX, 0);
 
         //try get message we already have before ack
-        $result = $this->_queue->get($messageOne, PHP_INT_MAX, 0);
+        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
         $this->assertNull($result);
     }
 
@@ -329,13 +351,13 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $messageTwo = ['key' => 1];
         $messageThree = ['key' => 2];
 
-        $this->_queue->send($messageOne, 0, 0.5);
-        $this->_queue->send($messageTwo, 0, 0.4);
-        $this->_queue->send($messageThree, 0, 0.3);
+        $this->queue->send($messageOne, 0, 0.5);
+        $this->queue->send($messageTwo, 0, 0.4);
+        $this->queue->send($messageThree, 0, 0.3);
 
-        $resultOne = $this->_queue->get([], PHP_INT_MAX, 0);
-        $resultTwo = $this->_queue->get([], PHP_INT_MAX, 0);
-        $resultThree = $this->_queue->get([], PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultThree = $this->queue->get([], PHP_INT_MAX, 0);
 
         $this->assertSame(['id' => $resultOne['id']] + $messageThree, $resultOne);
         $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
@@ -353,13 +375,13 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $messageTwo = ['key' => 1];
         $messageThree = ['key' => 2];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send($messageTwo);
-        $this->_queue->send($messageThree);
+        $this->queue->send($messageOne);
+        $this->queue->send($messageTwo);
+        $this->queue->send($messageThree);
 
-        $resultOne = $this->_queue->get([], PHP_INT_MAX, 0);
-        $resultTwo = $this->_queue->get([], PHP_INT_MAX, 0);
-        $resultThree = $this->_queue->get([], PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultThree = $this->queue->get([], PHP_INT_MAX, 0);
 
         $this->assertSame(['id' => $resultOne['id']] + $messageOne, $resultOne);
         $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
@@ -379,17 +401,17 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $messageTwo = ['key' => 1];
         $messageThree = ['key' => 2];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send($messageTwo);
-        $this->_queue->send($messageThree);
+        $this->queue->send($messageOne);
+        $this->queue->send($messageTwo);
+        $this->queue->send($messageThree);
 
-        $resultTwo = $this->_queue->get([], PHP_INT_MAX, 0);
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
         //ensuring using old timestamp shouldn't affect normal time order of send()s
-        $this->_queue->requeue($resultTwo, 0, 0.0, false);
+        $this->queue->requeue($resultTwo, 0, 0.0, false);
 
-        $resultOne = $this->_queue->get([], PHP_INT_MAX, 0);
-        $resultTwo = $this->_queue->get([], PHP_INT_MAX, 0);
-        $resultThree = $this->_queue->get([], PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultThree = $this->queue->get([], PHP_INT_MAX, 0);
 
         $this->assertSame(['id' => $resultOne['id']] + $messageOne, $resultOne);
         $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
@@ -404,7 +426,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $start = microtime(true);
 
-        $this->_queue->get([], PHP_INT_MAX, 200);
+        $this->queue->get([], PHP_INT_MAX, 200);
 
         $end = microtime(true);
 
@@ -421,13 +443,13 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
          $messageOne = ['key1' => 0, 'key2' => true];
 
-         $this->_queue->send($messageOne, time() + 1);
+         $this->queue->send($messageOne, time() + 1);
 
-         $this->assertNull($this->_queue->get($messageOne, PHP_INT_MAX, 0));
+         $this->assertNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
 
          sleep(1);
 
-         $this->assertNotNull($this->_queue->get($messageOne, PHP_INT_MAX, 0));
+         $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
     }
 
     /**
@@ -440,22 +462,28 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $messageOne = ['key' => 0];
         $messageTwo = ['key' => 1];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send($messageTwo);
+        $this->queue->send($messageOne);
+        $this->queue->send($messageTwo);
 
         //sets to running
-        $this->_collection->update(['payload.key' => 0], ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]);
-        $this->_collection->update(['payload.key' => 1], ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]);
+        $this->collection->update(
+            ['payload.key' => 0],
+            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]
+        );
+        $this->collection->update(
+            ['payload.key' => 1],
+            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]
+        );
 
-        $this->assertSame(2, $this->_collection->count(['running' => true]));
+        $this->assertSame(2, $this->collection->count(['running' => true]));
 
         //sets resetTimestamp on messageOne
-        $this->_queue->get($messageOne, 0, 0);
+        $this->queue->get($messageOne, 0, 0);
 
         //resets and gets messageOne
-        $this->assertNotNull($this->_queue->get($messageOne, PHP_INT_MAX, 0));
+        $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
 
-        $this->assertSame(1, $this->_collection->count(['running' => false]));
+        $this->assertSame(1, $this->collection->count(['running' => false]));
     }
 
     /**
@@ -465,7 +493,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function countWithNonNullOrBoolRunning()
     {
-        $this->_queue->count([], 1);
+        $this->queue->count([], 1);
     }
 
     /**
@@ -475,7 +503,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function countWithNonStringKey()
     {
-        $this->_queue->count([0 => 'a value']);
+        $this->queue->count([0 => 'a value']);
     }
 
     /**
@@ -488,19 +516,19 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $message = ['boo' => 'scary'];
 
-        $this->assertSame(0, $this->_queue->count($message, true));
-        $this->assertSame(0, $this->_queue->count($message, false));
-        $this->assertSame(0, $this->_queue->count($message));
+        $this->assertSame(0, $this->queue->count($message, true));
+        $this->assertSame(0, $this->queue->count($message, false));
+        $this->assertSame(0, $this->queue->count($message));
 
-        $this->_queue->send($message);
-        $this->assertSame(1, $this->_queue->count($message, false));
-        $this->assertSame(0, $this->_queue->count($message, true));
-        $this->assertSame(1, $this->_queue->count($message));
+        $this->queue->send($message);
+        $this->assertSame(1, $this->queue->count($message, false));
+        $this->assertSame(0, $this->queue->count($message, true));
+        $this->assertSame(1, $this->queue->count($message));
 
-        $this->_queue->get($message, PHP_INT_MAX, 0);
-        $this->assertSame(0, $this->_queue->count($message, false));
-        $this->assertSame(1, $this->_queue->count($message, true));
-        $this->assertSame(1, $this->_queue->count($message));
+        $this->queue->get($message, PHP_INT_MAX, 0);
+        $this->assertSame(0, $this->queue->count($message, false));
+        $this->assertSame(1, $this->queue->count($message, true));
+        $this->assertSame(1, $this->queue->count($message));
     }
 
     /**
@@ -513,14 +541,14 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $messageOne = ['key1' => 0, 'key2' => true];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send(['key' => 'value']);
+        $this->queue->send($messageOne);
+        $this->queue->send(['key' => 'value']);
 
-        $result = $this->_queue->get($messageOne, PHP_INT_MAX, 0);
-        $this->assertSame(2, $this->_collection->count());
+        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $this->assertSame(2, $this->collection->count());
 
-        $this->_queue->ack($result);
-        $this->assertSame(1, $this->_collection->count());
+        $this->queue->ack($result);
+        $this->assertSame(1, $this->collection->count());
     }
 
     /**
@@ -530,7 +558,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackBadArg()
     {
-        $this->_queue->ack(['id' => new \stdClass()]);
+        $this->queue->ack(['id' => new \stdClass()]);
     }
 
     /**
@@ -544,16 +572,16 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $messageOne = ['key1' => 0, 'key2' => true];
         $messageThree = ['hi' => 'there', 'rawr' => 2];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send(['key' => 'value']);
+        $this->queue->send($messageOne);
+        $this->queue->send(['key' => 'value']);
 
-        $resultOne = $this->_queue->get($messageOne, PHP_INT_MAX, 0);
-        $this->assertSame(2, $this->_collection->count());
+        $resultOne = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $this->assertSame(2, $this->collection->count());
 
-        $this->_queue->ackSend($resultOne, $messageThree);
-        $this->assertSame(2, $this->_collection->count());
+        $this->queue->ackSend($resultOne, $messageThree);
+        $this->assertSame(2, $this->collection->count());
 
-        $actual = $this->_queue->get(['hi' => 'there'], PHP_INT_MAX, 0);
+        $actual = $this->queue->get(['hi' => 'there'], PHP_INT_MAX, 0);
         $expected = ['id' => $resultOne['id']] + $messageThree;
 
         $actual['id'] = $actual['id']->__toString();
@@ -568,7 +596,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithWrongIdType()
     {
-        $this->_queue->ackSend(['id' => 5], []);
+        $this->queue->ackSend(['id' => 5], []);
     }
 
     /**
@@ -578,7 +606,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithNanPriority()
     {
-        $this->_queue->ackSend(['id' => new \MongoId()], [], 0, NAN);
+        $this->queue->ackSend(['id' => new \MongoId()], [], 0, NAN);
     }
 
     /**
@@ -588,7 +616,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithNonFloatPriority()
     {
-        $this->_queue->ackSend(['id' => new \MongoId()], [], 0, 'NotAFloat');
+        $this->queue->ackSend(['id' => new \MongoId()], [], 0, 'NotAFloat');
     }
 
     /**
@@ -598,7 +626,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithNonIntEarliestGet()
     {
-        $this->_queue->ackSend(['id' => new \MongoId()], [], true);
+        $this->queue->ackSend(['id' => new \MongoId()], [], true);
     }
 
     /**
@@ -608,7 +636,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithNonBoolNewTimestamp()
     {
-        $this->_queue->ackSend(['id' => new \MongoId()], [], 0, 0.0, 1);
+        $this->queue->ackSend(['id' => new \MongoId()], [], 0, 0.0, 1);
     }
 
     /**
@@ -619,10 +647,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithHighEarliestGet()
     {
-        $this->_queue->send([]);
-        $messageToAck = $this->_queue->get([], PHP_INT_MAX, 0);
+        $this->queue->send([]);
+        $messageToAck = $this->queue->get([], PHP_INT_MAX, 0);
 
-        $this->_queue->ackSend($messageToAck, [], PHP_INT_MAX);
+        $this->queue->ackSend($messageToAck, [], PHP_INT_MAX);
 
         $expected = [
             'payload' => [],
@@ -632,7 +660,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
             'priority' => 0.0,
         ];
 
-        $message = $this->_collection->findOne();
+        $message = $this->collection->findOne();
 
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
@@ -652,10 +680,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function ackSendWithLowEarliestGet()
     {
-        $this->_queue->send([]);
-        $messageToAck = $this->_queue->get([], PHP_INT_MAX, 0);
+        $this->queue->send([]);
+        $messageToAck = $this->queue->get([], PHP_INT_MAX, 0);
 
-        $this->_queue->ackSend($messageToAck, [], -1);
+        $this->queue->ackSend($messageToAck, [], -1);
 
         $expected = [
             'payload' => [],
@@ -665,7 +693,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
             'priority' => 0.0,
         ];
 
-        $message = $this->_collection->findOne();
+        $message = $this->collection->findOne();
 
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
@@ -688,15 +716,15 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     {
         $messageOne = ['key1' => 0, 'key2' => true];
 
-        $this->_queue->send($messageOne);
-        $this->_queue->send(['key' => 'value']);
+        $this->queue->send($messageOne);
+        $this->queue->send(['key' => 'value']);
 
-        $resultBeforeRequeue = $this->_queue->get($messageOne, PHP_INT_MAX, 0);
+        $resultBeforeRequeue = $this->queue->get($messageOne, PHP_INT_MAX, 0);
 
-        $this->_queue->requeue($resultBeforeRequeue);
-        $this->assertSame(2, $this->_collection->count());
+        $this->queue->requeue($resultBeforeRequeue);
+        $this->assertSame(2, $this->collection->count());
 
-        $resultAfterRequeue = $this->_queue->get($messageOne, 0);
+        $resultAfterRequeue = $this->queue->get($messageOne, 0);
         $this->assertSame(['id' => $resultAfterRequeue['id']] + $messageOne, $resultAfterRequeue);
     }
 
@@ -708,7 +736,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function requeueBadArg()
     {
-        $this->_queue->requeue(['id' => new \stdClass()]);
+        $this->queue->requeue(['id' => new \stdClass()]);
     }
 
     /**
@@ -718,7 +746,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     public function send()
     {
         $payload = ['key1' => 0, 'key2' => true];
-        $this->_queue->send($payload, 34, 0.8);
+        $this->queue->send($payload, 34, 0.8);
 
         $expected = [
             'payload' => $payload,
@@ -728,7 +756,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
             'priority' => 0.8,
         ];
 
-        $message = $this->_collection->findOne();
+        $message = $this->collection->findOne();
 
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
@@ -747,7 +775,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function sendWithNanPriority()
     {
-        $this->_queue->send([], 0, NAN);
+        $this->queue->send([], 0, NAN);
     }
 
     /**
@@ -757,7 +785,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function sendWithNonIntegerEarliestGet()
     {
-        $this->_queue->send([], true);
+        $this->queue->send([], true);
     }
 
     /**
@@ -767,7 +795,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function sendWithNonFloatPriority()
     {
-        $this->_queue->send([], 0, new \stdClass());
+        $this->queue->send([], 0, new \stdClass());
     }
 
     /**
@@ -776,7 +804,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function sendWithHighEarliestGet()
     {
-        $this->_queue->send([], PHP_INT_MAX);
+        $this->queue->send([], PHP_INT_MAX);
 
         $expected = [
             'payload' => [],
@@ -786,7 +814,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
             'priority' => 0.0,
         ];
 
-        $message = $this->_collection->findOne();
+        $message = $this->collection->findOne();
 
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
@@ -804,11 +832,17 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      */
     public function sendWithLowEarliestGet()
     {
-        $this->_queue->send([], -1);
+        $this->queue->send([], -1);
 
-        $expected = ['payload' => [], 'running' => false, 'resetTimestamp' => Queue::MONGO_INT32_MAX, 'earliestGet' => 0, 'priority' => 0.0];
+        $expected = [
+            'payload' => [],
+            'running' => false,
+            'resetTimestamp' => Queue::MONGO_INT32_MAX,
+            'earliestGet' => 0,
+            'priority' => 0.0,
+        ];
 
-        $message = $this->_collection->findOne();
+        $message = $this->collection->findOne();
 
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);

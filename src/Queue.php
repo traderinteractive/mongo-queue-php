@@ -8,8 +8,8 @@ namespace DominionEnterprises\Mongo;
 /**
  * Abstraction of mongo db collection as priority queue.
  *
- * Tied priorities are ordered by time. So you may use a single priority for normal queuing (default args exist for this purpose).
- * Using a random priority achieves random get()
+ * Tied priorities are ordered by time. So you may use a single priority for normal queuing (default args exist for
+ * this purpose).  Using a random priority achieves random get()
  */
 final class Queue
 {
@@ -20,7 +20,7 @@ final class Queue
      *
      * @var \MongoCollection
      */
-    private $_collection;
+    private $collection;
 
     /**
      * Construct queue.
@@ -47,14 +47,16 @@ final class Queue
 
         $mongo = new \MongoClient($url);
         $mongoDb = $mongo->selectDB($db);
-        $this->_collection = $mongoDb->selectCollection($collection);
+        $this->collection = $mongoDb->selectCollection($collection);
     }
 
     /**
      * Ensure an index for the get() method.
      *
-     * @param array $beforeSort fields in get() call to index before the sort field in same format as \MongoCollection::ensureIndex()
-     * @param array $afterSort fields in get() call to index after the sort field in same format as \MongoCollection::ensureIndex()
+     * @param array $beforeSort Fields in get() call to index before the sort field in same format
+     *                          as \MongoCollection::ensureIndex()
+     * @param array $afterSort  Fields in get() call to index after the sort field in same format as
+     *                          \MongoCollection::ensureIndex()
      *
      * @return void
      *
@@ -96,15 +98,16 @@ final class Queue
         $completeFields['earliestGet'] = 1;
 
         //for the main query in get()
-        $this->_ensureIndex($completeFields);
+        $this->ensureIndex($completeFields);
 
         //for the stuck messages query in get()
-        $this->_ensureIndex(['running' => 1, 'resetTimestamp' => 1]);
+        $this->ensureIndex(['running' => 1, 'resetTimestamp' => 1]);
     }
 
     /**
      * Ensure an index for the count() method.
-     * Is a no-op if the generated index is a prefix of an existing one. If you have a similar ensureGetIndex call, call it first.
+     * Is a no-op if the generated index is a prefix of an existing one. If you have a similar ensureGetIndex call,
+     * call it first.
      *
      * @param array $fields fields in count() call to index in same format as \MongoCollection::ensureIndex()
      * @param bool $includeRunning whether to include the running field in the index
@@ -139,21 +142,24 @@ final class Queue
             $completeFields["payload.{$key}"] = $value;
         }
 
-        $this->_ensureIndex($completeFields);
+        $this->ensureIndex($completeFields);
     }
 
     /**
      * Get a non running message from the queue.
      *
      * @param array $query in same format as \MongoCollection::find() where top level fields do not contain operators.
-     * Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3}, invalid {$and: [{...}, {...}]}
-     * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be retreived again.
+     *                     Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
+     *                     invalid {$and: [{...}, {...}]}
+     * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be
+     *                                  retreived again.
      * @param int $waitDurationInMillis millisecond duration to wait for a message.
      * @param int $pollDurationInMillis millisecond duration to wait between polls.
      *
      * @return array|null the message or null if one is not found
      *
-     * @throws \InvalidArgumentException $runningResetDuration, $waitDurationInMillis or $pollDurationInMillis was not an int
+     * @throws \InvalidArgumentException $runningResetDuration, $waitDurationInMillis or $pollDurationInMillis was not
+     *                                   an int
      * @throws \InvalidArgumentException key in $query was not a string
      */
     public function get(array $query, $runningResetDuration, $waitDurationInMillis = 3000, $pollDurationInMillis = 200)
@@ -175,7 +181,7 @@ final class Queue
         }
 
         //reset stuck messages
-        $this->_collection->update(
+        $this->collection->update(
             ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]],
             ['$set' => ['running' => false]],
             ['multiple' => true]
@@ -214,8 +220,9 @@ final class Queue
         }   //@codeCoverageIgnoreEnd
 
         while (true) {
-            $message = $this->_collection->findAndModify($completeQuery, $update, $fields, $options);
-            //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query on older mongo extension
+            $message = $this->collection->findAndModify($completeQuery, $update, $fields, $options);
+            //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query on
+            //older mongo extension
             if ($message !== null && array_key_exists('_id', $message)) {
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
                 return ['id' => $message['_id']] + $message['payload'];
@@ -265,7 +272,7 @@ final class Queue
             $totalQuery["payload.{$key}"] = $value;
         }
 
-        return $this->_collection->count($totalQuery);
+        return $this->collection->count($totalQuery);
     }
 
     /**
@@ -288,14 +295,15 @@ final class Queue
             throw new \InvalidArgumentException('$message does not have a field "id" that is a MongoId');
         }
 
-        $this->_collection->remove(['_id' => $id]);
+        $this->collection->remove(['_id' => $id]);
     }
 
     /**
      * Atomically acknowledge and send a message to the queue.
      *
      * @param array $message the message to ack received from get()
-     * @param array $payload the data to store in the message to send. Data is handled same way as \MongoCollection::insert()
+     * @param array $payload the data to store in the message to send. Data is handled same way
+     *                       as \MongoCollection::insert()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
      * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
@@ -352,8 +360,9 @@ final class Queue
             $toSet['created'] = new \MongoDate();
         }
 
-        //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY) so we can just send
-        $this->_collection->update(['_id' => $id], ['$set' => $toSet], ['upsert' => true]);
+        //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY)
+        //so we can just send
+        $this->collection->update(['_id' => $id], ['$set' => $toSet], ['upsert' => true]);
     }
 
     /**
@@ -421,7 +430,7 @@ final class Queue
             'created' => new \MongoDate(),
         ];
 
-        $this->_collection->insert($message);
+        $this->collection->insert($message);
     }
 
     /**
@@ -434,10 +443,10 @@ final class Queue
      *
      * @throws \Exception couldnt create index after 5 attempts
      */
-    private function _ensureIndex(array $index)
+    private function ensureIndex(array $index)
     {
         //if $index is a prefix of any existing index we are good
-        foreach ($this->_collection->getIndexInfo() as $existingIndex) {
+        foreach ($this->collection->getIndexInfo() as $existingIndex) {
             $slice = array_slice($existingIndex['key'], 0, count($index), true);
             if ($slice === $index) {
                 return;
@@ -448,15 +457,15 @@ final class Queue
             for ($name = uniqid(); strlen($name) > 0; $name = substr($name, 0, -1)) {
                 //creating an index with same name and different spec does nothing.
                 //creating an index with same spec and different name does nothing.
-                //so we use any generated name, and then find the right spec after we have called, and just go with that name.
-
+                //so we use any generated name, and then find the right spec after we have called,
+                //and just go with that name.
                 try {
-                    $this->_collection->ensureIndex($index, ['name' => $name, 'background' => true]);
+                    $this->collection->ensureIndex($index, ['name' => $name, 'background' => true]);
                 } catch (\MongoException $e) {
                     //this happens when the name was too long, let continue
                 }
 
-                foreach ($this->_collection->getIndexInfo() as $existingIndex) {
+                foreach ($this->collection->getIndexInfo() as $existingIndex) {
                     if ($existingIndex['key'] === $index) {
                         return;
                     }
