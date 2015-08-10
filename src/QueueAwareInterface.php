@@ -1,0 +1,25 @@
+<?php
+
+namespace DominionEnterprises\Mongo;
+
+/**
+ * Interface for QueueInterface dependency injection.
+ */
+interface QueueAwareInterface
+{
+    /**
+     * Returns the QueueInterface instance.
+     *
+     * @return QueueInterface
+     */
+    public function getQueue();
+
+    /**
+     * Sets the QueueInterface instance.
+     *
+     * @param QueueInterface $queue
+     *
+     * @return QueueAwareInterface
+     */
+    public function setQueue(QueueInterface $queue);
+}
