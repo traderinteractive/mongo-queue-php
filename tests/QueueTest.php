@@ -5,7 +5,6 @@ namespace DominionEnterprises\Mongo;
 /**
  * @coversDefaultClass \DominionEnterprises\Mongo\Queue
  * @covers ::<private>
- * @uses \DominionEnterprises\Mongo\Queue::__construct
  */
 final class QueueTest extends \PHPUnit_Framework_TestCase
 {
