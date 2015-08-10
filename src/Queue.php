@@ -25,16 +25,21 @@ final class Queue implements QueueInterface
     /**
      * Construct queue.
      *
-     * @param string $url the mongo url
+     * @param \MongoCollection|string $collectionOrUrl A MongoCollection instance or the mongo connection url.
      * @param string $db the mongo db name
      * @param string $collection the collection name to use for the queue
      *
-     * @throws \InvalidArgumentException $url, $db or $collection was not a string
+     * @throws \InvalidArgumentException $collectionOrUrl, $db or $collection was not a string
      */
-    public function __construct($url, $db, $collection)
+    public function __construct($collectionOrUrl, $db = null, $collection = null)
     {
-        if (!is_string($url)) {
-            throw new \InvalidArgumentException('$url was not a string');
+        if ($collectionOrUrl instanceof \MongoCollection) {
+            $this->collection = $collectionOrUrl;
+            return;
+        }
+
+        if (!is_string($collectionOrUrl)) {
+            throw new \InvalidArgumentException('$collectionOrUrl was not a string');
         }
 
         if (!is_string($db)) {
@@ -45,7 +50,7 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$collection was not a string');
         }
 
-        $mongo = new \MongoClient($url);
+        $mongo = new \MongoClient($collectionOrUrl);
         $mongoDb = $mongo->selectDB($db);
         $this->collection = $mongoDb->selectCollection($collection);
     }

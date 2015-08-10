@@ -852,4 +852,44 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame($expected, $message);
     }
+
+    /**
+     * Verify Queue can be constructed with \MongoCollection
+     *
+     * @test
+     * @covers ::__construct
+     *
+     * @return void
+     */
+    public function constructWithCollection()
+    {
+        $mongo = new \MongoClient($this->mongoUrl);
+        $collection = $mongo->selectDB('testing')->selectCollection('custom_collection');
+        $collection->drop();
+        $queue = new Queue($collection);
+
+        $payload = ['key1' => 0, 'key2' => true];
+        $queue->send($payload, 34, 0.8);
+
+        $expected = [
+            'payload' => $payload,
+            'running' => false,
+            'resetTimestamp' => Queue::MONGO_INT32_MAX,
+            'earliestGet' => 34,
+            'priority' => 0.8,
+        ];
+
+        $this->assertSame(1, $collection->count());
+
+        $message = $collection->findOne();
+
+        $this->assertLessThanOrEqual(time(), $message['created']->sec);
+        $this->assertGreaterThan(time() - 10, $message['created']->sec);
+
+        unset($message['_id'], $message['created']);
+        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $message['earliestGet'] = $message['earliestGet']->sec;
+
+        $this->assertSame($expected, $message);
+    }
 }
