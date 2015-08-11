@@ -73,32 +73,28 @@ final class Queue implements QueueInterface
         //using general rule: equality, sort, range or more equality tests in that order for index
         $completeFields = ['running' => 1];
 
-        foreach ($beforeSort as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $beforeSort was not a string');
-            }
+        $verifySort = function ($sort, $label, &$completeFields) {
+            foreach ($sort as $key => $value) {
+                if (!is_string($key)) {
+                    throw new \InvalidArgumentException("key in \${$label} was not a string");
+                }
 
-            if ($value !== 1 && $value !== -1) {
-                throw new \InvalidArgumentException('value of $beforeSort is not 1 or -1 for ascending and descending');
-            }
+                if ($value !== 1 && $value !== -1) {
+                    throw new \InvalidArgumentException(
+                        'value of \${$label} is not 1 or -1 for ascending and descending'
+                    );
+                }
 
-            $completeFields["payload.{$key}"] = $value;
-        }
+                $completeFields["payload.{$key}"] = $value;
+            }
+        };
+
+        $verifySort($beforeSort, 'beforeSort', $completeFields);
 
         $completeFields['priority'] = 1;
         $completeFields['created'] = 1;
 
-        foreach ($afterSort as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $afterSort was not a string');
-            }
-
-            if ($value !== 1 && $value !== -1) {
-                throw new \InvalidArgumentException('value of $afterSort is not 1 or -1 for ascending and descending');
-            }
-
-            $completeFields["payload.{$key}"] = $value;
-        }
+        $verifySort($afterSort, 'afterSort', $completeFields);
 
         $completeFields['earliestGet'] = 1;
 
