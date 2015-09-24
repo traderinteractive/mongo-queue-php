@@ -25,16 +25,21 @@ final class Queue implements QueueInterface
     /**
      * Construct queue.
      *
-     * @param string $url the mongo url
+     * @param \MongoCollection|string $collectionOrUrl A MongoCollection instance or the mongo connection url.
      * @param string $db the mongo db name
      * @param string $collection the collection name to use for the queue
      *
-     * @throws \InvalidArgumentException $url, $db or $collection was not a string
+     * @throws \InvalidArgumentException $collectionOrUrl, $db or $collection was not a string
      */
-    public function __construct($url, $db, $collection)
+    public function __construct($collectionOrUrl, $db = null, $collection = null)
     {
-        if (!is_string($url)) {
-            throw new \InvalidArgumentException('$url was not a string');
+        if ($collectionOrUrl instanceof \MongoCollection) {
+            $this->collection = $collectionOrUrl;
+            return;
+        }
+
+        if (!is_string($collectionOrUrl)) {
+            throw new \InvalidArgumentException('$collectionOrUrl was not a string');
         }
 
         if (!is_string($db)) {
@@ -45,7 +50,7 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$collection was not a string');
         }
 
-        $mongo = new \MongoClient($url);
+        $mongo = new \MongoClient($collectionOrUrl);
         $mongoDb = $mongo->selectDB($db);
         $this->collection = $mongoDb->selectCollection($collection);
     }
@@ -68,32 +73,28 @@ final class Queue implements QueueInterface
         //using general rule: equality, sort, range or more equality tests in that order for index
         $completeFields = ['running' => 1];
 
-        foreach ($beforeSort as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $beforeSort was not a string');
-            }
+        $verifySort = function ($sort, $label, &$completeFields) {
+            foreach ($sort as $key => $value) {
+                if (!is_string($key)) {
+                    throw new \InvalidArgumentException("key in \${$label} was not a string");
+                }
 
-            if ($value !== 1 && $value !== -1) {
-                throw new \InvalidArgumentException('value of $beforeSort is not 1 or -1 for ascending and descending');
-            }
+                if ($value !== 1 && $value !== -1) {
+                    throw new \InvalidArgumentException(
+                        'value of \${$label} is not 1 or -1 for ascending and descending'
+                    );
+                }
 
-            $completeFields["payload.{$key}"] = $value;
-        }
+                $completeFields["payload.{$key}"] = $value;
+            }
+        };
+
+        $verifySort($beforeSort, 'beforeSort', $completeFields);
 
         $completeFields['priority'] = 1;
         $completeFields['created'] = 1;
 
-        foreach ($afterSort as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $afterSort was not a string');
-            }
-
-            if ($value !== 1 && $value !== -1) {
-                throw new \InvalidArgumentException('value of $afterSort is not 1 or -1 for ascending and descending');
-            }
-
-            $completeFields["payload.{$key}"] = $value;
-        }
+        $verifySort($afterSort, 'afterSort', $completeFields);
 
         $completeFields['earliestGet'] = 1;
 
