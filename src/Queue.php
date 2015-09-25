@@ -318,11 +318,8 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$newTimestamp was not a bool');
         }
 
-        if ($earliestGet > self::MONGO_INT32_MAX) {
-            $earliestGet = self::MONGO_INT32_MAX;
-        } elseif ($earliestGet < 0) {
-            $earliestGet = 0;
-        }
+        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
+        $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
 
         $toSet = [
             'payload' => $payload,
@@ -390,11 +387,8 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$priority was NaN');
         }
 
-        if ($earliestGet > self::MONGO_INT32_MAX) {
-            $earliestGet = self::MONGO_INT32_MAX;
-        } elseif ($earliestGet < 0) {
-            $earliestGet = 0;
-        }
+        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
+        $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
 
         $message = [
             'payload' => $payload,
