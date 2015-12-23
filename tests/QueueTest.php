@@ -61,32 +61,29 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->queue->ensureGetIndex(['type' => 1], ['boo' => -1]);
         $this->queue->ensureGetIndex(['another.sub' => 1]);
 
-        $this->assertSame(4, count($this->collection->getIndexInfo()));
+        $this->assertSame(3, count($this->collection->getIndexInfo()));
 
         $expectedOne = [
-            'running' => 1,
+            'resetTimestamp' => 1,
             'payload.type' => 1,
             'priority' => 1,
             'created' => 1,
             'payload.boo' => -1,
             'earliestGet' => 1
         ];
+
         $resultOne = $this->collection->getIndexInfo();
         $this->assertSame($expectedOne, $resultOne[1]['key']);
 
-        $expectedTwo = ['running' => 1, 'resetTimestamp' => 1];
-        $resultTwo = $this->collection->getIndexInfo();
-        $this->assertSame($expectedTwo, $resultTwo[2]['key']);
-
-        $expectedThree = [
-            'running' => 1,
+        $expectedTwo = [
+            'resetTimestamp' => 1,
             'payload.another.sub' => 1,
             'priority' => 1,
             'created' => 1,
             'earliestGet' => 1
         ];
-        $resultThree = $this->collection->getIndexInfo();
-        $this->assertSame($expectedThree, $resultThree[3]['key']);
+        $resultTwo = $this->collection->getIndexInfo();
+        $this->assertSame($expectedTwo, $resultTwo[2]['key']);
     }
 
     /**
@@ -158,7 +155,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $resultOne = $this->collection->getIndexInfo();
         $this->assertSame($expectedOne, $resultOne[1]['key']);
 
-        $expectedTwo = ['running' => 1, 'payload.another.sub' => 1];
+        $expectedTwo = ['resetTimestamp' => 1, 'payload.another.sub' => 1];
         $resultTwo = $this->collection->getIndexInfo();
         $this->assertSame($expectedTwo, $resultTwo[2]['key']);
     }
@@ -467,22 +464,36 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         //sets to running
         $this->collection->update(
             ['payload.key' => 0],
-            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]
+            ['$set' => ['resetTimestamp' => new \MongoDate(strtotime('+3 minutes'))]]
         );
         $this->collection->update(
             ['payload.key' => 1],
-            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]
+            ['$set' => ['resetTimestamp' => new \MongoDate(strtotime('+3 minutes'))]]
         );
 
-        $this->assertSame(2, $this->collection->count(['running' => true]));
+        $this->assertSame(0, $this->collection->count(['resetTimestamp' => ['$lte' => new \MongoDate()]]));
 
-        //sets resetTimestamp on messageOne
-        $this->queue->get($messageOne, 0, 0);
+        $this->assertNull($this->queue->get([], 0, 0));
 
-        //resets and gets messageOne
-        $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
+        $this->collection->update(
+            ['payload.key' => 1],
+            ['$set' => ['resetTimestamp' => new \MongoDate()]]
+        );
 
-        $this->assertSame(1, $this->collection->count(['running' => false]));
+        $this->assertSame(1, $this->collection->count(['resetTimestamp' => ['$lte' => new \MongoDate()]]));
+
+        $actual = $this->queue->get([], PHP_INT_MAX, 0);
+        $this->assertSame(
+            [
+                'id' => $actual['id'],
+                'key' => 1,
+            ],
+            $actual
+        );
+
+        $this->queue->ack($actual);
+
+        $this->assertSame(0, $this->collection->count(['resetTimestamp' => ['$lte' => new \MongoDate()]]));
     }
 
     /**
@@ -653,8 +664,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => Queue::MONGO_INT32_MAX,
             'priority' => 0.0,
         ];
@@ -664,8 +673,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
 
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $this->assertLessThanOrEqual(time(), $message['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() - 10, $message['resetTimestamp']->sec);
+
+        unset($message['_id'], $message['created'], $message['resetTimestamp']);
         $message['earliestGet'] = $message['earliestGet']->sec;
 
         $this->assertSame($expected, $message);
@@ -686,8 +697,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => 0,
             'priority' => 0.0,
         ];
@@ -697,8 +706,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
 
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $this->assertLessThanOrEqual(time(), $message['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() - 10, $message['resetTimestamp']->sec);
+
+        unset($message['_id'], $message['created'], $message['resetTimestamp']);
         $message['earliestGet'] = $message['earliestGet']->sec;
 
         $this->assertSame($expected, $message);
@@ -749,8 +760,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => 34,
             'priority' => 0.8,
         ];
@@ -760,8 +769,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
 
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $this->assertLessThanOrEqual(time(), $message['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() - 10, $message['resetTimestamp']->sec);
+
+        unset($message['_id'], $message['created'], $message['resetTimestamp']);
         $message['earliestGet'] = $message['earliestGet']->sec;
 
         $this->assertSame($expected, $message);
@@ -807,8 +818,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => Queue::MONGO_INT32_MAX,
             'priority' => 0.0,
         ];
@@ -818,8 +827,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
 
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $this->assertLessThanOrEqual(time(), $message['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() - 10, $message['resetTimestamp']->sec);
+
+        unset($message['_id'], $message['created'], $message['resetTimestamp']);
         $message['earliestGet'] = $message['earliestGet']->sec;
 
         $this->assertSame($expected, $message);
@@ -835,8 +846,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => 0,
             'priority' => 0.0,
         ];
@@ -846,8 +855,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
 
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $this->assertLessThanOrEqual(time(), $message['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() - 10, $message['resetTimestamp']->sec);
+
+        unset($message['_id'], $message['created'], $message['resetTimestamp']);
         $message['earliestGet'] = $message['earliestGet']->sec;
 
         $this->assertSame($expected, $message);
@@ -873,8 +884,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => 34,
             'priority' => 0.8,
         ];
@@ -886,8 +895,10 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertLessThanOrEqual(time(), $message['created']->sec);
         $this->assertGreaterThan(time() - 10, $message['created']->sec);
 
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->sec;
+        $this->assertLessThanOrEqual(time(), $message['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() - 10, $message['resetTimestamp']->sec);
+
+        unset($message['_id'], $message['created'], $message['resetTimestamp']);
         $message['earliestGet'] = $message['earliestGet']->sec;
 
         $this->assertSame($expected, $message);
