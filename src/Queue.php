@@ -73,28 +73,12 @@ final class Queue implements QueueInterface
         //using general rule: equality, sort, range or more equality tests in that order for index
         $completeFields = ['running' => 1];
 
-        $verifySort = function ($sort, $label, &$completeFields) {
-            foreach ($sort as $key => $value) {
-                if (!is_string($key)) {
-                    throw new \InvalidArgumentException("key in \${$label} was not a string");
-                }
-
-                if ($value !== 1 && $value !== -1) {
-                    throw new \InvalidArgumentException(
-                        'value of \${$label} is not 1 or -1 for ascending and descending'
-                    );
-                }
-
-                $completeFields["payload.{$key}"] = $value;
-            }
-        };
-
-        $verifySort($beforeSort, 'beforeSort', $completeFields);
+        self::verifySort($beforeSort, 'beforeSort', $completeFields);
 
         $completeFields['priority'] = 1;
         $completeFields['created'] = 1;
 
-        $verifySort($afterSort, 'afterSort', $completeFields);
+        self::verifySort($afterSort, 'afterSort', $completeFields);
 
         $completeFields['earliestGet'] = 1;
 
@@ -131,17 +115,7 @@ final class Queue implements QueueInterface
             $completeFields['running'] = 1;
         }
 
-        foreach ($fields as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $fields was not a string');
-            }
-
-            if ($value !== 1 && $value !== -1) {
-                throw new \InvalidArgumentException('value of $fields is not 1 or -1 for ascending and descending');
-            }
-
-            $completeFields["payload.{$key}"] = $value;
-        }
+        self::verifySort($fields, 'fields', $completeFields);
 
         $this->ensureIndex($completeFields);
     }
@@ -344,11 +318,8 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$newTimestamp was not a bool');
         }
 
-        if ($earliestGet > self::MONGO_INT32_MAX) {
-            $earliestGet = self::MONGO_INT32_MAX;
-        } elseif ($earliestGet < 0) {
-            $earliestGet = 0;
-        }
+        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
+        $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
 
         $toSet = [
             'payload' => $payload,
@@ -416,11 +387,8 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$priority was NaN');
         }
 
-        if ($earliestGet > self::MONGO_INT32_MAX) {
-            $earliestGet = self::MONGO_INT32_MAX;
-        } elseif ($earliestGet < 0) {
-            $earliestGet = 0;
-        }
+        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
+        $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
 
         $message = [
             'payload' => $payload,
@@ -475,5 +443,31 @@ final class Queue implements QueueInterface
         }
 
         throw new \Exception('couldnt create index after 5 attempts');
+    }
+
+    /**
+     * Helper method to validate keys and values for the given sort array
+     *
+     * @param array  $sort             The proposed sort for a mongo index.
+     * @param string $label            The name of the variable given to the public ensureXIndex method.
+     * @param array  &$completedFields The final index array with payload. prefix added to fields.
+     *
+     * @return void
+     */
+    private static function verifySort(array $sort, $label, &$completeFields)
+    {
+        foreach ($sort as $key => $value) {
+            if (!is_string($key)) {
+                throw new \InvalidArgumentException("key in \${$label} was not a string");
+            }
+
+            if ($value !== 1 && $value !== -1) {
+                throw new \InvalidArgumentException(
+                    "value of \${$label} is not 1 or -1 for ascending and descending"
+                );
+            }
+
+            $completeFields["payload.{$key}"] = $value;
+        }
     }
 }
