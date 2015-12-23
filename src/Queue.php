@@ -163,14 +163,7 @@ final class Queue implements QueueInterface
         );
 
         $completeQuery = ['running' => false];
-        foreach ($query as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $query was not a string');
-            }
-
-            $completeQuery["payload.{$key}"] = $value;
-        }
-
+        self::verifyQuery($query, $completeQuery);
         $completeQuery['earliestGet'] = ['$lte' => new \MongoDate()];
 
         $resetTimestamp = time() + $runningResetDuration;
@@ -239,13 +232,7 @@ final class Queue implements QueueInterface
             $totalQuery['running'] = $running;
         }
 
-        foreach ($query as $key => $value) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $query was not a string');
-            }
-
-            $totalQuery["payload.{$key}"] = $value;
-        }
+        self::verifyQuery($query, $totalQuery);
 
         return $this->collection->count($totalQuery);
     }
@@ -468,6 +455,25 @@ final class Queue implements QueueInterface
             }
 
             $completeFields["payload.{$key}"] = $value;
+        }
+    }
+
+    /**
+     * Helper method to validate get queries.
+     *
+     * @param array $query The user provided query.
+     * @param array &$completeQuery The validated query for gets.
+     *
+     * @return void
+     */
+    private static function verifyQuery(array $query, array &$completeQuery)
+    {
+        foreach ($query as $key => $value) {
+            if (!is_string($key)) {
+                throw new \InvalidArgumentException('key in $query was not a string');
+            }
+
+            $completeQuery["payload.{$key}"] = $value;
         }
     }
 }
