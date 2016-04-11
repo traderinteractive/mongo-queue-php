@@ -71,7 +71,7 @@ final class Queue implements QueueInterface
     public function ensureGetIndex(array $beforeSort = [], array $afterSort = [])
     {
         //using general rule: equality, sort, range or more equality tests in that order for index
-        $completeFields = ['running' => 1];
+        $completeFields = ['earliestGet' => 1];
 
         self::verifySort($beforeSort, 'beforeSort', $completeFields);
 
@@ -80,13 +80,8 @@ final class Queue implements QueueInterface
 
         self::verifySort($afterSort, 'afterSort', $completeFields);
 
-        $completeFields['earliestGet'] = 1;
-
         //for the main query in get()
         $this->ensureIndex($completeFields);
-
-        //for the stuck messages query in get()
-        $this->ensureIndex(['running' => 1, 'resetTimestamp' => 1]);
     }
 
     /**
@@ -112,7 +107,7 @@ final class Queue implements QueueInterface
         $completeFields = [];
 
         if ($includeRunning) {
-            $completeFields['running'] = 1;
+            $completeFields['earliestGet'] = 1;
         }
 
         self::verifySort($fields, 'fields', $completeFields);
@@ -155,14 +150,7 @@ final class Queue implements QueueInterface
             $pollDurationInMillis = 0;
         }
 
-        //reset stuck messages
-        $this->collection->update(
-            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]],
-            ['$set' => ['running' => false]],
-            ['multiple' => true]
-        );
-
-        $completeQuery = ['running' => false];
+        $completeQuery = ['earliestGet' => ['$lte' => new \MongoDate()]];
         foreach ($query as $key => $value) {
             if (!is_string($key)) {
                 throw new \InvalidArgumentException('key in $query was not a string');
@@ -171,15 +159,13 @@ final class Queue implements QueueInterface
             $completeQuery["payload.{$key}"] = $value;
         }
 
-        $completeQuery['earliestGet'] = ['$lte' => new \MongoDate()];
-
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats
         if (!is_int($resetTimestamp)) {
             $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
         }
 
-        $update = ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true]];
+        $update = ['$set' => ['earliestGet' => new \MongoDate($resetTimestamp)]];
         $fields = ['payload' => 1];
         $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
@@ -235,8 +221,9 @@ final class Queue implements QueueInterface
 
         $totalQuery = [];
 
-        if ($running !== null) {
-            $totalQuery['running'] = $running;
+        if ($running === true || $running === false) {
+            $key = $running ? '$gt' : '$lte';
+            $totalQuery['earliestGet'] = [$key => new \MongoDate()];
         }
 
         foreach ($query as $key => $value) {
@@ -323,8 +310,6 @@ final class Queue implements QueueInterface
 
         $toSet = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
         ];
@@ -387,13 +372,11 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$priority was NaN');
         }
 
-        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
+        //Ensure $earliestGet is between now and MONGO_INT32_MAX
         $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
 
         $message = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDate($earliestGet),
             'priority' => $priority,
             'created' => new \MongoDate(),
