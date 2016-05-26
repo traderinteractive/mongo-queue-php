@@ -439,10 +439,13 @@ final class Queue implements QueueInterface
                         return;
                     }
                 }
+
+                //@codeCoverageIgnoreStart
             }
         }
 
         throw new \Exception('couldnt create index after 5 attempts');
+        //@codeCoverageIgnoreEnd
     }
 
     /**
