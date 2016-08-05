@@ -439,8 +439,6 @@ final class Queue implements QueueInterface
                         return;
                     }
                 }
-
-                //@codeCoverageIgnoreStart
             }
         }
 
