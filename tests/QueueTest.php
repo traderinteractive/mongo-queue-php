@@ -142,6 +142,24 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Verifies the behaviour of the Queue when it cannot create an index after 5 attempts.
+     *
+     * @test
+     * @covers ::ensureGetIndex
+     * @expectedException \Exception
+     * @expectedExceptionMessage couldnt create index after 5 attempts
+     */
+    public function ensureIndexCannotBeCreatedAfterFiveAttempts()
+    {
+        $mockCollection = $this->getMockBuilder('\MongoDB\Collection')->disableOriginalConstructor()->getMock();
+
+        $mockCollection->method('listIndexes')->willReturn([]);
+
+        $queue = new Queue($mockCollection);
+        $queue->ensureCountIndex(['type' => 1], false);
+    }
+
+    /**
      * @test
      * @covers ::ensureCountIndex
      */
