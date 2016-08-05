@@ -266,7 +266,7 @@ final class Queue implements QueueInterface
             $id = $message['id'];
         }
 
-        if (!($id instanceof \MongoDB\BSON\ObjectID)) {
+        if (!(is_a($id, 'MongoDB\BSON\ObjectID'))) {
             throw new \InvalidArgumentException('$message does not have a field "id" that is a ObjectID');
         }
 
@@ -298,7 +298,7 @@ final class Queue implements QueueInterface
             $id = $message['id'];
         }
 
-        if (!($id instanceof \MongoDB\BSON\ObjectID)) {
+        if (!(is_a($id, 'MongoDB\BSON\ObjectID'))) {
             throw new \InvalidArgumentException('$message does not have a field "id" that is a ObjectID');
         }
 
