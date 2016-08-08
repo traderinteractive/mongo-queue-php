@@ -18,14 +18,14 @@ final class Queue implements QueueInterface
     /**
      * mongo collection to use for queue.
      *
-     * @var \MongoCollection
+     * @var \MongoDB\Collection
      */
     private $collection;
 
     /**
      * Construct queue.
      *
-     * @param \MongoCollection|string $collectionOrUrl A MongoCollection instance or the mongo connection url.
+     * @param \MongoDB\Collection|string $collectionOrUrl A MongoCollection instance or the mongo connection url.
      * @param string $db the mongo db name
      * @param string $collection the collection name to use for the queue
      *
@@ -33,7 +33,7 @@ final class Queue implements QueueInterface
      */
     public function __construct($collectionOrUrl, $db = null, $collection = null)
     {
-        if ($collectionOrUrl instanceof \MongoCollection) {
+        if ($collectionOrUrl instanceof \MongoDB\Collection) {
             $this->collection = $collectionOrUrl;
             return;
         }
@@ -50,8 +50,8 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$collection was not a string');
         }
 
-        $mongo = new \MongoClient($collectionOrUrl);
-        $mongoDb = $mongo->selectDB($db);
+        $mongo = new \MongoDB\Client($collectionOrUrl, [], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]);
+        $mongoDb = $mongo->selectDatabase($db);
         $this->collection = $mongoDb->selectCollection($collection);
     }
 
@@ -59,9 +59,9 @@ final class Queue implements QueueInterface
      * Ensure an index for the get() method.
      *
      * @param array $beforeSort Fields in get() call to index before the sort field in same format
-     *                          as \MongoCollection::ensureIndex()
+     *                          as \MongoDB\Collection::ensureIndex()
      * @param array $afterSort  Fields in get() call to index after the sort field in same format as
-     *                          \MongoCollection::ensureIndex()
+     *                          \MongoDB\Collection::ensureIndex()
      *
      * @return void
      *
@@ -94,7 +94,7 @@ final class Queue implements QueueInterface
      * Is a no-op if the generated index is a prefix of an existing one. If you have a similar ensureGetIndex call,
      * call it first.
      *
-     * @param array $fields fields in count() call to index in same format as \MongoCollection::ensureIndex()
+     * @param array $fields fields in count() call to index in same format as \MongoDB\Collection::createIndex()
      * @param bool $includeRunning whether to include the running field in the index
      *
      * @return void
@@ -123,7 +123,7 @@ final class Queue implements QueueInterface
     /**
      * Get a non running message from the queue.
      *
-     * @param array $query in same format as \MongoCollection::find() where top level fields do not contain operators.
+     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain operators.
      *                     Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
      *                     invalid {$and: [{...}, {...}]}
      * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be
@@ -156,10 +156,9 @@ final class Queue implements QueueInterface
         }
 
         //reset stuck messages
-        $this->collection->update(
-            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]],
-            ['$set' => ['running' => false]],
-            ['multiple' => true]
+        $this->collection->updateMany(
+            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000)]],
+            ['$set' => ['running' => false]]
         );
 
         $completeQuery = ['running' => false];
@@ -171,7 +170,7 @@ final class Queue implements QueueInterface
             $completeQuery["payload.{$key}"] = $value;
         }
 
-        $completeQuery['earliestGet'] = ['$lte' => new \MongoDate()];
+        $completeQuery['earliestGet'] = ['$lte' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000)];
 
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats
@@ -179,8 +178,7 @@ final class Queue implements QueueInterface
             $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
         }
 
-        $update = ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true]];
-        $fields = ['payload' => 1];
+        $update = ['$set' => ['resetTimestamp' => new \MongoDB\BSON\UTCDateTime($resetTimestamp * 1000), 'running' => true]];
         $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
         //ints overflow to floats, should be fine
@@ -195,12 +193,14 @@ final class Queue implements QueueInterface
         }   //@codeCoverageIgnoreEnd
 
         while (true) {
-            $message = $this->collection->findAndModify($completeQuery, $update, $fields, $options);
+            $message = $this->collection->findOneAndUpdate($completeQuery, $update, $options);
             //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query on
             //older mongo extension
             if ($message !== null && array_key_exists('_id', $message)) {
+                // findOneAndUpdate does not correctly return result according to typeMap options so just refetch.
+                $message = $this->collection->findOne(['_id' => $message->_id]);
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
-                return ['id' => $message['_id']] + $message['payload'];
+                return ['id' => $message['_id']] + (array)$message['payload'];
             }
 
             if (microtime(true) >= $end) {
@@ -218,7 +218,7 @@ final class Queue implements QueueInterface
     /**
      * Count queue messages.
      *
-     * @param array $query in same format as \MongoCollection::find() where top level fields do not contain operators.
+     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain operators.
      * Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3}, invalid {$and: [{...}, {...}]}
      * @param bool|null $running query a running message or not or all
      *
@@ -257,7 +257,7 @@ final class Queue implements QueueInterface
      *
      * @return void
      *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a MongoId
+     * @throws \InvalidArgumentException $message does not have a field "id" that is a MongoDB\BSON\ObjectID
      */
     public function ack(array $message)
     {
@@ -266,11 +266,11 @@ final class Queue implements QueueInterface
             $id = $message['id'];
         }
 
-        if (!($id instanceof \MongoId)) {
-            throw new \InvalidArgumentException('$message does not have a field "id" that is a MongoId');
+        if (!(is_a($id, 'MongoDB\BSON\ObjectID'))) {
+            throw new \InvalidArgumentException('$message does not have a field "id" that is a ObjectID');
         }
 
-        $this->collection->remove(['_id' => $id]);
+        $this->collection->deleteOne(['_id' => $id]);
     }
 
     /**
@@ -278,14 +278,14 @@ final class Queue implements QueueInterface
      *
      * @param array $message the message to ack received from get()
      * @param array $payload the data to store in the message to send. Data is handled same way
-     *                       as \MongoCollection::insert()
+     *                       as \MongoDB\Collection::insertOne()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
      * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
      *
      * @return void
      *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a MongoId
+     * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
      * @throws \InvalidArgumentException $earliestGet was not an int
      * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException $priority is NaN
@@ -298,8 +298,8 @@ final class Queue implements QueueInterface
             $id = $message['id'];
         }
 
-        if (!($id instanceof \MongoId)) {
-            throw new \InvalidArgumentException('$message does not have a field "id" that is a MongoId');
+        if (!(is_a($id, 'MongoDB\BSON\ObjectID'))) {
+            throw new \InvalidArgumentException('$message does not have a field "id" that is a ObjectID');
         }
 
         if (!is_int($earliestGet)) {
@@ -324,17 +324,17 @@ final class Queue implements QueueInterface
         $toSet = [
             'payload' => $payload,
             'running' => false,
-            'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
-            'earliestGet' => new \MongoDate($earliestGet),
+            'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX),
+            'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet),
             'priority' => $priority,
         ];
         if ($newTimestamp) {
-            $toSet['created'] = new \MongoDate();
+            $toSet['created'] = new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000);
         }
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY)
         //so we can just send
-        $this->collection->update(['_id' => $id], ['$set' => $toSet], ['upsert' => true]);
+        $this->collection->updateOne(['_id' => $id], ['$set' => $toSet], ['upsert' => true]);
     }
 
     /**
@@ -347,7 +347,7 @@ final class Queue implements QueueInterface
      *
      * @return void
      *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a MongoId
+     * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
      * @throws \InvalidArgumentException $earliestGet was not an int
      * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException priority is NaN
@@ -363,7 +363,7 @@ final class Queue implements QueueInterface
     /**
      * Send a message to the queue.
      *
-     * @param array $payload the data to store in the message. Data is handled same way as \MongoCollection::insert()
+     * @param array $payload the data to store in the message. Data is handled same way as \MongoDB\Collection::insertOne()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
      *
@@ -393,20 +393,20 @@ final class Queue implements QueueInterface
         $message = [
             'payload' => $payload,
             'running' => false,
-            'resetTimestamp' => new \MongoDate(self::MONGO_INT32_MAX),
-            'earliestGet' => new \MongoDate($earliestGet),
+            'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX * 1000),
+            'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet * 1000),
             'priority' => $priority,
-            'created' => new \MongoDate(),
+            'created' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000),
         ];
 
-        $this->collection->insert($message);
+        $this->collection->insertOne($message);
     }
 
     /**
      * Ensure index of correct specification and a unique name whether the specification or name already exist or not.
      * Will not create index if $index is a prefix of an existing index
      *
-     * @param array $index index to create in same format as \MongoCollection::ensureIndex()
+     * @param array $index index to create in same format as \MongoDB\Collection::createIndex()
      *
      * @return void
      *
@@ -415,7 +415,7 @@ final class Queue implements QueueInterface
     private function ensureIndex(array $index)
     {
         //if $index is a prefix of any existing index we are good
-        foreach ($this->collection->getIndexInfo() as $existingIndex) {
+        foreach ($this->collection->listIndexes() as $existingIndex) {
             $slice = array_slice($existingIndex['key'], 0, count($index), true);
             if ($slice === $index) {
                 return;
@@ -429,12 +429,12 @@ final class Queue implements QueueInterface
                 //so we use any generated name, and then find the right spec after we have called,
                 //and just go with that name.
                 try {
-                    $this->collection->ensureIndex($index, ['name' => $name, 'background' => true]);
-                } catch (\MongoException $e) {
+                    $this->collection->createIndex($index, ['name' => $name, 'background' => true]);
+                } catch (\MongoDB\Exception\Exception $e) {
                     //this happens when the name was too long, let continue
                 }
 
-                foreach ($this->collection->getIndexInfo() as $existingIndex) {
+                foreach ($this->collection->listIndexes() as $existingIndex) {
                     if ($existingIndex['key'] === $index) {
                         return;
                     }
@@ -443,6 +443,7 @@ final class Queue implements QueueInterface
         }
 
         throw new \Exception('couldnt create index after 5 attempts');
+        //@codeCoverageIgnoreEnd
     }
 
     /**

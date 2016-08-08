@@ -26,7 +26,7 @@ interface QueueInterface
     /**
      * Ensure an index for the count() method.
      *
-     * @param array $fields fields in count() call to index in same format as \MongoCollection::ensureIndex()
+     * @param array $fields fields in count() call to index in same format as \MongoDB\Collection::createIndex()
      * @param bool $includeRunning whether to include the running field in the index
      *
      * @return void
@@ -40,7 +40,7 @@ interface QueueInterface
     /**
      * Get a non running message from the queue.
      *
-     * @param array $query in same format as \MongoCollection::find() where top level fields do not contain operators.
+     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain operators.
      * Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3}, invalid {$and: [{...}, {...}]}
      * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be
      *                                  retreived again.
@@ -58,7 +58,7 @@ interface QueueInterface
     /**
      * Count queue messages.
      *
-     * @param array $query in same format as \MongoCollection::find() where top level fields do not contain operators.
+     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain operators.
      * Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3}, invalid {$and: [{...}, {...}]}
      * @param bool|null $running query a running message or not or all
      *
@@ -85,7 +85,7 @@ interface QueueInterface
      *
      * @param array $message the message to ack received from get()
      * @param array $payload the data to store in the message to send. Data is handled same way
-     *                       as \MongoCollection::insert()
+     *                       as \MongoDB\Collection::insertOne()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
      * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
@@ -121,7 +121,7 @@ interface QueueInterface
     /**
      * Send a message to the queue.
      *
-     * @param array $payload the data to store in the message. Data is handled same way as \MongoCollection::insert()
+     * @param array $payload the data to store in the message. Data is handled same way as \MongoDB\Collection::insertOne()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
      *
