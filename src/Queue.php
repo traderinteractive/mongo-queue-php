@@ -157,13 +157,11 @@ class Queue implements QueueInterface
      * @param int $waitDurationInMillis millisecond duration to wait for a message.
      * @param int $pollDurationInMillis millisecond duration to wait between polls.
      *
+     * @param null|callable $resetCallback will be called for each reset queue element
      * @return array|null the message or null if one is not found
      *
-     * @throws \InvalidArgumentException $runningResetDuration, $waitDurationInMillis or $pollDurationInMillis was not
-     *                                   an int
-     * @throws \InvalidArgumentException key in $query was not a string
      */
-    public function get(array $query, $runningResetDuration, $waitDurationInMillis = 3000, $pollDurationInMillis = 200)
+    public function get(array $query, $runningResetDuration, $waitDurationInMillis = 3000, $pollDurationInMillis = 200, $resetCallback = null)
     {
         if (!is_int($runningResetDuration)) {
             throw new \InvalidArgumentException('$runningResetDuration was not an int');
@@ -182,11 +180,23 @@ class Queue implements QueueInterface
         }
 
         //reset stuck messages
-        $this->collection->update(
-            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]],
-            ['$set' => ['running' => false]],
-            ['multiple' => true]
-        );
+        $resetQuery = ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]];
+        $resetUpdate = ['$set' => ['running' => false]];
+        if(is_null($resetCallback)) {
+            $this->collection->update(
+                $resetQuery,
+                $resetUpdate,
+                ['multiple' => true]
+            );
+        } else {
+            do {
+                $result = $this->collection->findAndModify($resetQuery, $resetUpdate);
+                if(!is_null($result)) {
+                    $resetCallback($result);
+                }
+            } while(is_null($result));
+        }
+
 
         $completeQuery = ['running' => false];
         foreach ($query as $key => $value) {
