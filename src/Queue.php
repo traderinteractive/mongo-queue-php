@@ -194,7 +194,7 @@ class Queue implements QueueInterface
                 if(!is_null($result)) {
                     $resetCallback($result);
                 }
-            } while(is_null($result));
+            } while(!is_null($result));
         }
 
 
