@@ -319,7 +319,7 @@ final class Queue implements QueueInterface
         }
 
         //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
-        $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
+        $earliestGet = min(max(0, $earliestGet * 1000), self::MONGO_INT32_MAX);
 
         $toSet = [
             'payload' => $payload,
