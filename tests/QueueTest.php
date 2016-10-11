@@ -2,6 +2,8 @@
 
 namespace DominionEnterprises\Mongo;
 
+use MongoDB\BSON\UTCDateTime;
+
 /**
  * @coversDefaultClass \DominionEnterprises\Mongo\Queue
  * @covers ::<private>
@@ -604,6 +606,26 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Verify earliestGet with ackSend.
+     *
+     * @test
+     * @covers ::ackSend
+     *
+     * @return void
+     */
+    public function ackSendWithEarliestGet()
+    {
+        $message = ['key1' => 0, 'key2' => true];
+        $this->queue->send($message);
+        $result = $this->queue->get([], PHP_INT_MAX, 0);
+        $this->assertSame($message['key1'], $result['key1']);
+        $this->assertSame($message['key2'], $result['key2']);
+        $this->queue->ackSend($result, ['key1' => 1, 'key2' => 2], strtotime('+ 1 day'));
+        $actual = $this->queue->get([], PHP_INT_MAX, 0);
+        $this->assertNull($actual);
+    }
+
+    /**
      * @test
      * @covers ::ackSend
      * @expectedException \InvalidArgumentException
@@ -765,7 +787,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $expected = [
             'payload' => $payload,
             'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
+            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => 34,
             'priority' => 0.8,
         ];
@@ -823,8 +845,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $expected = [
             'payload' => [],
             'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
-            'earliestGet' => Queue::MONGO_INT32_MAX,
+            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
+            'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'priority' => 0.0,
         ];
 
@@ -851,7 +873,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $expected = [
             'payload' => [],
             'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
+            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => 0,
             'priority' => 0.0,
         ];
@@ -889,7 +911,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $expected = [
             'payload' => $payload,
             'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
+            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => 34,
             'priority' => 0.8,
         ];
