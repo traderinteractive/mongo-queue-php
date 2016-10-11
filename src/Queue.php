@@ -13,7 +13,12 @@ namespace DominionEnterprises\Mongo;
  */
 final class Queue implements QueueInterface
 {
-    const MONGO_INT32_MAX = 2147483647;//2147483648 can overflow in php mongo without using the MongoInt64
+    /**
+     * Maximum millisecond value to use for UTCDateTime creation.
+     *
+     * @var integer
+     */
+    const MONGO_INT32_MAX = PHP_INT_MAX;
 
     /**
      * mongo collection to use for queue.
@@ -178,7 +183,9 @@ final class Queue implements QueueInterface
             $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
         }
 
-        $update = ['$set' => ['resetTimestamp' => new \MongoDB\BSON\UTCDateTime($resetTimestamp * 1000), 'running' => true]];
+        $resetTimestamp = min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
+
+        $update = ['$set' => ['resetTimestamp' => new \MongoDB\BSON\UTCDateTime($resetTimestamp), 'running' => true]];
         $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
         //ints overflow to floats, should be fine
@@ -388,13 +395,13 @@ final class Queue implements QueueInterface
         }
 
         //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
-        $earliestGet = min(max(0, $earliestGet), self::MONGO_INT32_MAX);
+        $earliestGet = min(max(0, $earliestGet * 1000), self::MONGO_INT32_MAX);
 
         $message = [
             'payload' => $payload,
             'running' => false,
-            'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX * 1000),
-            'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet * 1000),
+            'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX),
+            'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet),
             'priority' => $priority,
             'created' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000)),
         ];
