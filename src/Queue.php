@@ -157,7 +157,7 @@ final class Queue implements QueueInterface
 
         //reset stuck messages
         $this->collection->updateMany(
-            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000)]],
+            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]],
             ['$set' => ['running' => false]]
         );
 
@@ -170,7 +170,7 @@ final class Queue implements QueueInterface
             $completeQuery["payload.{$key}"] = $value;
         }
 
-        $completeQuery['earliestGet'] = ['$lte' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000)];
+        $completeQuery['earliestGet'] = ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))];
 
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats
@@ -329,7 +329,7 @@ final class Queue implements QueueInterface
             'priority' => $priority,
         ];
         if ($newTimestamp) {
-            $toSet['created'] = new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000);
+            $toSet['created'] = new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000));
         }
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY)
@@ -396,7 +396,7 @@ final class Queue implements QueueInterface
             'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX * 1000),
             'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet * 1000),
             'priority' => $priority,
-            'created' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000),
+            'created' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000)),
         ];
 
         $this->collection->insertOne($message);

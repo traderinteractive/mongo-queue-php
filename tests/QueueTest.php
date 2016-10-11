@@ -482,11 +482,11 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         //sets to running
         $this->collection->updateOne(
             ['payload.key' => 0],
-            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000)]]
+            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
         );
         $this->collection->updateOne(
             ['payload.key' => 1],
-            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(microtime(true) * 1000)]]
+            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
         );
 
         $this->assertSame(2, $this->collection->count(['running' => true]));
