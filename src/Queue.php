@@ -76,7 +76,7 @@ final class Queue implements QueueInterface
     public function ensureGetIndex(array $beforeSort = [], array $afterSort = [])
     {
         //using general rule: equality, sort, range or more equality tests in that order for index
-        $completeFields = ['running' => 1];
+        $completeFields = ['earliestGet' => 1];
 
         self::verifySort($beforeSort, 'beforeSort', $completeFields);
 
@@ -85,13 +85,8 @@ final class Queue implements QueueInterface
 
         self::verifySort($afterSort, 'afterSort', $completeFields);
 
-        $completeFields['earliestGet'] = 1;
-
         //for the main query in get()
         $this->ensureIndex($completeFields);
-
-        //for the stuck messages query in get()
-        $this->ensureIndex(['running' => 1, 'resetTimestamp' => 1]);
     }
 
     /**
@@ -117,7 +112,7 @@ final class Queue implements QueueInterface
         $completeFields = [];
 
         if ($includeRunning) {
-            $completeFields['running'] = 1;
+            $completeFields['earliestGet'] = 1;
         }
 
         self::verifySort($fields, 'fields', $completeFields);
@@ -160,13 +155,7 @@ final class Queue implements QueueInterface
             $pollDurationInMillis = 0;
         }
 
-        //reset stuck messages
-        $this->collection->updateMany(
-            ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]],
-            ['$set' => ['running' => false]]
-        );
-
-        $completeQuery = ['running' => false];
+        $completeQuery = ['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]];
         foreach ($query as $key => $value) {
             if (!is_string($key)) {
                 throw new \InvalidArgumentException('key in $query was not a string');
@@ -174,8 +163,6 @@ final class Queue implements QueueInterface
 
             $completeQuery["payload.{$key}"] = $value;
         }
-
-        $completeQuery['earliestGet'] = ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))];
 
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats
@@ -185,7 +172,7 @@ final class Queue implements QueueInterface
 
         $resetTimestamp = min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
 
-        $update = ['$set' => ['resetTimestamp' => new \MongoDB\BSON\UTCDateTime($resetTimestamp), 'running' => true]];
+        $update = ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime($resetTimestamp)]];
         $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
         //ints overflow to floats, should be fine
@@ -242,8 +229,9 @@ final class Queue implements QueueInterface
 
         $totalQuery = [];
 
-        if ($running !== null) {
-            $totalQuery['running'] = $running;
+        if ($running === true || $running === false) {
+            $key = $running ? '$gt' : '$lte';
+            $totalQuery['earliestGet'] = [$key => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))];
         }
 
         foreach ($query as $key => $value) {
@@ -330,8 +318,6 @@ final class Queue implements QueueInterface
 
         $toSet = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet),
             'priority' => $priority,
         ];
@@ -399,8 +385,6 @@ final class Queue implements QueueInterface
 
         $message = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => new \MongoDB\BSON\UTCDateTime(self::MONGO_INT32_MAX),
             'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet),
             'priority' => $priority,
             'created' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000)),
