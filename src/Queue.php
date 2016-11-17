@@ -5,6 +5,8 @@
 
 namespace DominionEnterprises\Mongo;
 
+use MongoDB\BSON\UTCDateTime;
+
 /**
  * Abstraction of mongo db collection as priority queue.
  *
@@ -155,7 +157,7 @@ final class Queue implements QueueInterface
             $pollDurationInMillis = 0;
         }
 
-        $completeQuery = ['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]];
+        $completeQuery = ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]];
         foreach ($query as $key => $value) {
             if (!is_string($key)) {
                 throw new \InvalidArgumentException('key in $query was not a string');
@@ -172,7 +174,7 @@ final class Queue implements QueueInterface
 
         $resetTimestamp = min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
 
-        $update = ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime($resetTimestamp)]];
+        $update = ['$set' => ['earliestGet' => new UTCDateTime($resetTimestamp)]];
         $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
         //ints overflow to floats, should be fine
@@ -231,7 +233,7 @@ final class Queue implements QueueInterface
 
         if ($running === true || $running === false) {
             $key = $running ? '$gt' : '$lte';
-            $totalQuery['earliestGet'] = [$key => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))];
+            $totalQuery['earliestGet'] = [$key => new UTCDateTime((int)(microtime(true) * 1000))];
         }
 
         foreach ($query as $key => $value) {
@@ -318,11 +320,11 @@ final class Queue implements QueueInterface
 
         $toSet = [
             'payload' => $payload,
-            'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet),
+            'earliestGet' => new UTCDateTime($earliestGet),
             'priority' => $priority,
         ];
         if ($newTimestamp) {
-            $toSet['created'] = new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000));
+            $toSet['created'] = new UTCDateTime((int)(microtime(true) * 1000));
         }
 
         //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY)
@@ -385,9 +387,9 @@ final class Queue implements QueueInterface
 
         $message = [
             'payload' => $payload,
-            'earliestGet' => new \MongoDB\BSON\UTCDateTime($earliestGet),
+            'earliestGet' => new UTCDateTime($earliestGet),
             'priority' => $priority,
-            'created' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000)),
+            'created' => new UTCDateTime((int)(microtime(true) * 1000)),
         ];
 
         $this->collection->insertOne($message);
