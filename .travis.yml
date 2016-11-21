@@ -1,10 +1,19 @@
 language: php
 php:
   - 7.0
-services:
-  - mongodb
+  - 7.1
+  - 7.2
+  - nightly
+env:
+  - PREFER_LOWEST="--prefer-lowest --prefer-stable"
+  - PREFER_LOWEST=""
+services: mongodb
+matrix:
+  fast_finish: true
+  allow_failures:
+     - php: nightly
 before_script:
-  - composer self-update
-  - yes '' | pecl install -f mongodb-1.1
-script: ./build.php
-after_script: ./vendor/bin/coveralls -v
+  - yes '' | pecl install -f mongodb
+  - composer update $PREFER_LOWEST
+script: ./vendor/bin/phpunit --coverage-clover clover.xml
+after_success: ./vendor/bin/coveralls -v
