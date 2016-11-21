@@ -64,29 +64,24 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->queue->ensureGetIndex(['another.sub' => 1]);
 
         $indexes = iterator_to_array($this->collection->listIndexes());
-        $this->assertSame(4, count($indexes));
+        $this->assertSame(3, count($indexes));
 
         $expectedOne = [
-            'running' => 1,
+            'earliestGet' => 1,
             'payload.type' => 1,
             'priority' => 1,
             'created' => 1,
             'payload.boo' => -1,
-            'earliestGet' => 1
         ];
         $this->assertSame($expectedOne, $indexes[1]['key']);
 
-        $expectedTwo = ['running' => 1, 'resetTimestamp' => 1];
-        $this->assertSame($expectedTwo, $indexes[2]['key']);
-
-        $expectedThree = [
-            'running' => 1,
+        $expectedTwo = [
+            'earliestGet' => 1,
             'payload.another.sub' => 1,
             'priority' => 1,
             'created' => 1,
-            'earliestGet' => 1
         ];
-        $this->assertSame($expectedThree, $indexes[3]['key']);
+        $this->assertSame($expectedTwo, $indexes[2]['key']);
     }
 
     /**
@@ -176,7 +171,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $expectedOne = ['payload.type' => 1, 'payload.boo' => -1];
         $this->assertSame($expectedOne, $indexes[1]['key']);
 
-        $expectedTwo = ['running' => 1, 'payload.another.sub' => 1];
+        $expectedTwo = ['earliestGet' => 1, 'payload.another.sub' => 1];
         $this->assertSame($expectedTwo, $indexes[2]['key']);
     }
 
@@ -229,7 +224,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getByBadQuery()
     {
@@ -264,7 +258,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getWithNegativePollDuration()
     {
@@ -295,7 +288,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getByFullQuery()
     {
@@ -315,7 +307,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getBySubDocQuery()
     {
@@ -340,7 +331,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getBeforeAck()
     {
@@ -359,7 +349,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getWithCustomPriority()
     {
@@ -383,7 +372,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function getWithTimeBasedPriority()
     {
@@ -407,9 +395,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
-     * @uses \DominionEnterprises\Mongo\Queue::ackSend
-     * @uses \DominionEnterprises\Mongo\Queue::requeue
      */
     public function getWithTimeBasedPriorityWithOldTimestamp()
     {
@@ -453,7 +438,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function earliestGet()
     {
@@ -471,7 +455,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function resetStuck()
     {
@@ -484,22 +467,19 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         //sets to running
         $this->collection->updateOne(
             ['payload.key' => 0],
-            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
+            ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime(time() * 1000)]]
         );
         $this->collection->updateOne(
             ['payload.key' => 1],
-            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
+            ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime(time() * 1000)]]
         );
 
-        $this->assertSame(2, $this->collection->count(['running' => true]));
-
-        //sets resetTimestamp on messageOne
-        $this->queue->get($messageOne, 0, 0);
+        $this->assertSame(2, $this->collection->count(['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]));
 
         //resets and gets messageOne
         $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
 
-        $this->assertSame(1, $this->collection->count(['running' => false]));
+        $this->assertSame(1, $this->collection->count(['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]));
     }
 
     /**
@@ -525,8 +505,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::count
-     * @uses \DominionEnterprises\Mongo\Queue::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function testCount()
     {
@@ -550,8 +528,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ack
-     * @uses \DominionEnterprises\Mongo\Queue::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ack()
     {
@@ -580,8 +556,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ackSend
-     * @uses \DominionEnterprises\Mongo\Queue::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ackSend()
     {
@@ -678,8 +652,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ackSend
-     * @uses \DominionEnterprises\Mongo\Queue::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ackSendWithHighEarliestGet()
     {
@@ -690,8 +662,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
             'earliestGet' => Queue::MONGO_INT32_MAX,
             'priority' => 0.0,
         ];
@@ -702,17 +672,13 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
 
         unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = (int)$message['resetTimestamp']->__toString();
         $message['earliestGet'] = (int)$message['earliestGet']->__toString();
 
         $this->assertSame($expected, $message);
     }
 
     /**
-     * @test
      * @covers ::ackSend
-     * @uses \DominionEnterprises\Mongo\Queue::get
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function ackSendWithLowEarliestGet()
     {
@@ -744,9 +710,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::requeue
-     * @uses \DominionEnterprises\Mongo\Queue::get
-     * @uses \DominionEnterprises\Mongo\Queue::ackSend
-     * @uses \DominionEnterprises\Mongo\Queue::send
      */
     public function requeue()
     {
@@ -767,7 +730,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::requeue
-     * @uses \DominionEnterprises\Mongo\Queue::ackSend
      * @expectedException \InvalidArgumentException
      */
     public function requeueBadArg()
@@ -786,8 +748,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => 34,
             'priority' => 0.8,
         ];
@@ -798,7 +758,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
 
         unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->toDateTime()->getTimestamp();
         $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
 
         $this->assertSame($expected, $message);
@@ -844,8 +803,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'priority' => 0.0,
         ];
@@ -856,7 +813,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
 
         unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->toDateTime()->getTimestamp();
         $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
 
         $this->assertSame($expected, $message);
@@ -872,8 +828,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => [],
-            'running' => false,
-            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => 0,
             'priority' => 0.0,
         ];
@@ -884,7 +838,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
 
         unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->toDateTime()->getTimestamp();
         $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
 
         $this->assertSame($expected, $message);
@@ -910,8 +863,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $expected = [
             'payload' => $payload,
-            'running' => false,
-            'resetTimestamp' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
             'earliestGet' => 34,
             'priority' => 0.8,
         ];
@@ -924,7 +875,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
 
         unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = $message['resetTimestamp']->toDateTime()->getTimestamp();
         $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
 
         $this->assertSame($expected, $message);
