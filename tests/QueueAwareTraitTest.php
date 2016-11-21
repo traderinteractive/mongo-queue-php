@@ -15,7 +15,7 @@ class QueueAwareTraitTest extends \PHPUnit_Framework_TestCase
     {
         $mockQueue = $this->getObjectForTrait('\DominionEnterprises\Mongo\QueueAwareTrait');
         $this->assertAttributeEquals(null, 'mongoQueue', $mockQueue);
-        $mongoQueue = $this->getMock('\\DominionEnterprises\\Mongo\\QueueInterface');
+        $mongoQueue = $this->getMockBuilder('\\DominionEnterprises\\Mongo\\QueueInterface')->getMock();
         $mockQueue->setQueue($mongoQueue);
         $this->assertAttributeEquals($mongoQueue, 'mongoQueue', $mockQueue);
     }
@@ -32,7 +32,7 @@ class QueueAwareTraitTest extends \PHPUnit_Framework_TestCase
     {
         $mockQueue = $this->getObjectForTrait('\DominionEnterprises\Mongo\QueueAwareTrait');
         $this->assertNull($mockQueue->getQueue());
-        $mongoQueue = $this->getMock('\\DominionEnterprises\\Mongo\\QueueInterface');
+        $mongoQueue = $this->getMockBuilder('\\DominionEnterprises\\Mongo\\QueueInterface')->getMock();
         $mockQueue->setQueue($mongoQueue);
         $this->assertEquals($mongoQueue, $mockQueue->getQueue());
     }
