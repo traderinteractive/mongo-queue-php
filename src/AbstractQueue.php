@@ -68,16 +68,11 @@ abstract class AbstractQueue implements QueueInterface
      *
      * @return void
      *
-     * @throws \InvalidArgumentException $includeRunning was not a boolean
      * @throws \InvalidArgumentException key in $fields was not a string
      * @throws \InvalidArgumentException value of $fields is not 1 or -1 for ascending and descending
      */
-    final public function ensureCountIndex(array $fields, $includeRunning)
+    final public function ensureCountIndex(array $fields, bool $includeRunning)
     {
-        if (!is_bool($includeRunning)) {
-            throw new \InvalidArgumentException('$includeRunning was not a boolean');
-        }
-
         $completeFields = [];
 
         if ($includeRunning) {
@@ -92,8 +87,8 @@ abstract class AbstractQueue implements QueueInterface
     /**
      * Get a non running message from the queue.
      *
-     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain operators.
-     *                     Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
+     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain
+     *                     operators. Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
      *                     invalid {$and: [{...}, {...}]}
      * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be
      *                                  retreived again.
@@ -102,24 +97,14 @@ abstract class AbstractQueue implements QueueInterface
      *
      * @return array|null the message or null if one is not found
      *
-     * @throws \InvalidArgumentException $runningResetDuration, $waitDurationInMillis or $pollDurationInMillis was not
-     *                                   an int
      * @throws \InvalidArgumentException key in $query was not a string
      */
-    final public function get(array $query, $runningResetDuration, $waitDurationInMillis = 3000, $pollDurationInMillis = 200)
-    {
-        if (!is_int($runningResetDuration)) {
-            throw new \InvalidArgumentException('$runningResetDuration was not an int');
-        }
-
-        if (!is_int($waitDurationInMillis)) {
-            throw new \InvalidArgumentException('$waitDurationInMillis was not an int');
-        }
-
-        if (!is_int($pollDurationInMillis)) {
-            throw new \InvalidArgumentException('$pollDurationInMillis was not an int');
-        }
-
+    final public function get(
+        array $query,
+        int $runningResetDuration,
+        int $waitDurationInMillis = 3000,
+        int $pollDurationInMillis = 200
+    ) {
         if ($pollDurationInMillis < 0) {
             $pollDurationInMillis = 0;
         }
@@ -181,8 +166,9 @@ abstract class AbstractQueue implements QueueInterface
     /**
      * Count queue messages.
      *
-     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain operators.
-     * Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3}, invalid {$and: [{...}, {...}]}
+     * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain
+     *                     operators. Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
+     *                     invalid {$and: [{...}, {...}]}
      * @param bool|null $running query a running message or not or all
      *
      * @return int the count
@@ -250,13 +236,15 @@ abstract class AbstractQueue implements QueueInterface
      * @return void
      *
      * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
-     * @throws \InvalidArgumentException $earliestGet was not an int
-     * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException $priority is NaN
-     * @throws \InvalidArgumentException $newTimestamp was not a bool
      */
-    final public function ackSend(array $message, array $payload, $earliestGet = 0, $priority = 0.0, $newTimestamp = true)
-    {
+    final public function ackSend(
+        array $message,
+        array $payload,
+        int $earliestGet = 0,
+        float $priority = 0.0,
+        bool $newTimestamp = true
+    ) {
         $id = null;
         if (array_key_exists('id', $message)) {
             $id = $message['id'];
@@ -266,20 +254,8 @@ abstract class AbstractQueue implements QueueInterface
             throw new \InvalidArgumentException('$message does not have a field "id" that is a ObjectID');
         }
 
-        if (!is_int($earliestGet)) {
-            throw new \InvalidArgumentException('$earliestGet was not an int');
-        }
-
-        if (!is_float($priority)) {
-            throw new \InvalidArgumentException('$priority was not a float');
-        }
-
         if (is_nan($priority)) {
             throw new \InvalidArgumentException('$priority was NaN');
-        }
-
-        if ($newTimestamp !== true && $newTimestamp !== false) {
-            throw new \InvalidArgumentException('$newTimestamp was not a bool');
         }
 
         //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
@@ -310,13 +286,14 @@ abstract class AbstractQueue implements QueueInterface
      * @return void
      *
      * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
-     * @throws \InvalidArgumentException $earliestGet was not an int
-     * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException priority is NaN
-     * @throws \InvalidArgumentException $newTimestamp was not a bool
      */
-    final public function requeue(array $message, $earliestGet = 0, $priority = 0.0, $newTimestamp = true)
-    {
+    final public function requeue(
+        array $message,
+        int $earliestGet = 0,
+        float $priority = 0.0,
+        bool $newTimestamp = true
+    ) {
         $forRequeue = $message;
         unset($forRequeue['id']);
         $this->ackSend($message, $forRequeue, $earliestGet, $priority, $newTimestamp);
@@ -325,26 +302,17 @@ abstract class AbstractQueue implements QueueInterface
     /**
      * Send a message to the queue.
      *
-     * @param array $payload the data to store in the message. Data is handled same way as \MongoDB\Collection::insertOne()
+     * @param array $payload the data to store in the message. Data is handled same way
+     *                       as \MongoDB\Collection::insertOne()
      * @param int $earliestGet earliest unix timestamp the message can be retreived.
      * @param float $priority priority for order out of get(). 0 is higher priority than 1
      *
      * @return void
      *
-     * @throws \InvalidArgumentException $earliestGet was not an int
-     * @throws \InvalidArgumentException $priority was not a float
      * @throws \InvalidArgumentException $priority is NaN
      */
-    final public function send(array $payload, $earliestGet = 0, $priority = 0.0)
+    final public function send(array $payload, int $earliestGet = 0, float $priority = 0.0)
     {
-        if (!is_int($earliestGet)) {
-            throw new \InvalidArgumentException('$earliestGet was not an int');
-        }
-
-        if (!is_float($priority)) {
-            throw new \InvalidArgumentException('$priority was not a float');
-        }
-
         if (is_nan($priority)) {
             throw new \InvalidArgumentException('$priority was NaN');
         }

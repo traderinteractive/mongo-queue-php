@@ -36,26 +36,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
-     * @covers ::__construct
-     * @expectedException \InvalidArgumentException
-     */
-    public function constructWithNonStringDb()
-    {
-        new Queue($this->mongoUrl, true, 'messages');
-    }
-
-    /**
-     * @test
-     * @covers ::__construct
-     * @expectedException \InvalidArgumentException
-     */
-    public function constructWithNonStringCollection()
-    {
-        new Queue($this->mongoUrl, 'testing', new \stdClass());
-    }
-
-    /**
-     * @test
      * @covers ::ensureGetIndex
      */
     public function ensureGetIndex()
@@ -213,16 +193,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @test
-     * @covers ::ensureCountIndex
-     * @expectedException \InvalidArgumentException
-     */
-    public function ensureCountIndexWithNonBoolIncludeRunning()
-    {
-        $this->queue->ensureCountIndex(['field' => 1], 1);
-    }
-
-    /**
-     * @test
      * @covers ::get
      */
     public function getByBadQuery()
@@ -233,26 +203,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($result);
 
         $this->assertSame(1, $this->collection->count());
-    }
-
-    /**
-     * @test
-     * @covers ::get
-     * @expectedException \InvalidArgumentException
-     */
-    public function getWithNonIntWaitDuration()
-    {
-        $this->queue->get([], 0, 'NotAnInt');
-    }
-
-    /**
-     * @test
-     * @covers ::get
-     * @expectedException \InvalidArgumentException
-     */
-    public function getWithNonIntPollDuration()
-    {
-        $this->queue->get([], 0, 0, new \stdClass());
     }
 
     /**
@@ -273,16 +223,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     public function getWithNonStringKey()
     {
         $this->queue->get([0 => 'a value'], 0);
-    }
-
-    /**
-     * @test
-     * @covers ::get
-     * @expectedException \InvalidArgumentException
-     */
-    public function getWithNonIntRunningResetDuration()
-    {
-        $this->queue->get([], true);
     }
 
     /**
@@ -622,36 +562,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     /**
      * @test
      * @covers ::ackSend
-     * @expectedException \InvalidArgumentException
-     */
-    public function ackSendWithNonFloatPriority()
-    {
-        $this->queue->ackSend(['id' => new \MongoDB\BSON\ObjectID()], [], 0, 'NotAFloat');
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
-     * @expectedException \InvalidArgumentException
-     */
-    public function ackSendWithNonIntEarliestGet()
-    {
-        $this->queue->ackSend(['id' => new \MongoDB\BSON\ObjectID()], [], true);
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
-     * @expectedException \InvalidArgumentException
-     */
-    public function ackSendWithNonBoolNewTimestamp()
-    {
-        $this->queue->ackSend(['id' => new \MongoDB\BSON\ObjectID()], [], 0, 0.0, 1);
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
      */
     public function ackSendWithHighEarliestGet()
     {
@@ -771,26 +681,6 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
     public function sendWithNanPriority()
     {
         $this->queue->send([], 0, NAN);
-    }
-
-    /**
-     * @test
-     * @covers ::send
-     * @expectedException \InvalidArgumentException
-     */
-    public function sendWithNonIntegerEarliestGet()
-    {
-        $this->queue->send([], true);
-    }
-
-    /**
-     * @test
-     * @covers ::send
-     * @expectedException \InvalidArgumentException
-     */
-    public function sendWithNonFloatPriority()
-    {
-        $this->queue->send([], 0, new \stdClass());
     }
 
     /**
