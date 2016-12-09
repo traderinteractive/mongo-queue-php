@@ -158,10 +158,12 @@ class Queue implements QueueInterface
      * @param int $pollDurationInMillis millisecond duration to wait between polls.
      *
      * @param null|callable $resetCallback will be called for each reset queue element
+     * @param  array $additionalUpdate will be merged into the mongo update - can be used to provide context for running job.
+     *                      E.g.: <code>['$set' => ['host' => gethostname()]]</code>
      * @return array|null the message or null if one is not found
      *
      */
-    public function get(array $query, $runningResetDuration, $waitDurationInMillis = 3000, $pollDurationInMillis = 200, $resetCallback = null)
+    public function get(array $query, $runningResetDuration, $waitDurationInMillis = 3000, $pollDurationInMillis = 200, $resetCallback = null, $additionalUpdate = [])
     {
         if (!is_int($runningResetDuration)) {
             throw new \InvalidArgumentException('$runningResetDuration was not an int');
@@ -215,7 +217,7 @@ class Queue implements QueueInterface
             $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
         }
 
-        $update = ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true]];
+        $update = array_merge_recursive($additionalUpdate, ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp), 'running' => true]]);
         $fields = ['payload' => 1];
         $options = ['sort' => ['priority' => 1, 'created' => 1]];
 
