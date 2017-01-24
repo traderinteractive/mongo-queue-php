@@ -10,6 +10,7 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 {
     private $collection;
     private $mongoUrl;
+    /** @var  Queue */
     private $queue;
 
     public function setUp()
@@ -528,6 +529,25 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $this->assertSame(0, $this->queue->count($message, false));
         $this->assertSame(1, $this->queue->count($message, true));
         $this->assertSame(1, $this->queue->count($message));
+    }
+
+    /**
+     * @test
+     * @covers ::updateResetDuration
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
+     */
+    public function updateResetDuration() {
+        $messageOne = ['key' => 'value'];
+        $this->queue->send($messageOne);
+        $message = $this->queue->get($messageOne, 1000, 0);
+
+        $newResetDuration = 100;
+        $this->queue->updateResetDuration($message, $newResetDuration);
+
+        $queueElement = $this->collection->findOne();
+        $this->assertLessThanOrEqual(time() + $newResetDuration, $queueElement['resetTimestamp']->sec);
+        $this->assertGreaterThan(time() + $newResetDuration - 10, $queueElement['resetTimestamp']->sec);
     }
 
     /**

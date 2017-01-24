@@ -289,6 +289,35 @@ class Queue implements QueueInterface
     }
 
     /**
+     * @param array $message
+     * @param int $newResetDuration second duration the message can stay unacked (from now on)
+     *               before it resets and can be retreived again.
+     */
+    public function updateResetDuration(array $message, $newResetDuration)
+    {
+        $id = null;
+        if (array_key_exists('id', $message)) {
+            $id = $message['id'];
+        }
+
+        if (!($id instanceof \MongoId)) {
+            throw new \InvalidArgumentException('$message does not have a field "id" that is a MongoId');
+        }
+
+        if (!is_int($newResetDuration)) {
+            throw new \InvalidArgumentException('$newResetDuration was not an int');
+        }
+
+        $resetTimestamp = time() + $newResetDuration;
+        //ints overflow to floats
+        if (!is_int($resetTimestamp)) {
+            $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
+        }
+
+        $this->collection->update(['_id' => $id], ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp)]]);
+    }
+
+    /**
      * Acknowledge a message was processed and remove from queue.
      *
      * @param array $message message received from get()
