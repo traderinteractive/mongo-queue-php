@@ -537,7 +537,8 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
      * @uses \DominionEnterprises\Mongo\Queue::get
      * @uses \DominionEnterprises\Mongo\Queue::send
      */
-    public function updateResetDuration() {
+    public function updateResetDuration()
+    {
         $messageOne = ['key' => 'value'];
         $this->queue->send($messageOne);
         $message = $this->queue->get($messageOne, 1000, 0);

@@ -184,7 +184,7 @@ class Queue implements QueueInterface
         //reset stuck messages
         $resetQuery = ['running' => true, 'resetTimestamp' => ['$lte' => new \MongoDate()]];
         $resetUpdate = ['$set' => ['running' => false]];
-        if(is_null($resetCallback)) {
+        if (is_null($resetCallback)) {
             $this->collection->update(
                 $resetQuery,
                 $resetUpdate,
@@ -193,10 +193,10 @@ class Queue implements QueueInterface
         } else {
             do {
                 $result = $this->collection->findAndModify($resetQuery, $resetUpdate);
-                if(!is_null($result)) {
+                if (!is_null($result)) {
                     $resetCallback($result);
                 }
-            } while(!is_null($result));
+            } while (!is_null($result));
         }
 
 
