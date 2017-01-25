@@ -1,5 +1,6 @@
 #mongo-queue-php
-[![Build Status](http://img.shields.io/travis/dominionenterprises/mongo-queue-php.svg?style=flat)](https://travis-ci.org/dominionenterprises/mongo-queue-php)
+https://travis-ci.org/daniel-sc/mongo-queue-php.svg?branch=master
+[![Build Status](http://img.shields.io/travis/daniel-sc/mongo-queue-php.svg?style=flat)](https://travis-ci.org/daniel-sc/mongo-queue-php)
 [![Scrutinizer Code Quality](http://img.shields.io/scrutinizer/g/dominionenterprises/mongo-queue-php.svg?style=flat)](https://scrutinizer-ci.com/g/dominionenterprises/mongo-queue-php/)
 [![Code Coverage](http://img.shields.io/coveralls/dominionenterprises/mongo-queue-php.svg?style=flat)](https://coveralls.io/r/dominionenterprises/mongo-queue-php)
 
