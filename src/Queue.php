@@ -193,10 +193,12 @@ class Queue implements QueueInterface
         } else {
             do {
                 $result = $this->collection->findAndModify($resetQuery, $resetUpdate);
-                if (!is_null($result)) {
+                //checking if _id exist because findAndModify doesnt seem to return null
+                // when it can't match the query on older mongo extension
+                if (!is_null($result) && array_key_exists('_id', $result)) {
                     $resetCallback($result);
                 }
-            } while (!is_null($result));
+            } while (!is_null($result) && array_key_exists('_id', $result));
         }
 
 
@@ -311,7 +313,7 @@ class Queue implements QueueInterface
         $resetTimestamp = time() + $newResetDuration;
         //ints overflow to floats
         if (!is_int($resetTimestamp)) {
-            $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
+            $resetTimestamp = $newResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
         }
 
         $this->collection->update(['_id' => $id], ['$set' => ['resetTimestamp' => new \MongoDate($resetTimestamp)]]);

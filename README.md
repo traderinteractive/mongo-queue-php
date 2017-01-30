@@ -1,8 +1,7 @@
 #mongo-queue-php
-https://travis-ci.org/daniel-sc/mongo-queue-php.svg?branch=master
 [![Build Status](http://img.shields.io/travis/daniel-sc/mongo-queue-php.svg?style=flat)](https://travis-ci.org/daniel-sc/mongo-queue-php)
 [![Scrutinizer Code Quality](http://img.shields.io/scrutinizer/g/dominionenterprises/mongo-queue-php.svg?style=flat)](https://scrutinizer-ci.com/g/dominionenterprises/mongo-queue-php/)
-[![Code Coverage](http://img.shields.io/coveralls/dominionenterprises/mongo-queue-php.svg?style=flat)](https://coveralls.io/r/dominionenterprises/mongo-queue-php)
+[![Code Coverage](http://img.shields.io/coveralls/daniel-sc/mongo-queue-php.svg?style=flat)](https://coveralls.io/r/daniel-sc/mongo-queue-php)
 
 [![Latest Stable Version](http://img.shields.io/packagist/v/dominionenterprises/mongo-queue-php.svg?style=flat)](https://packagist.org/packages/dominionenterprises/mongo-queue-php)
 [![Total Downloads](http://img.shields.io/packagist/dt/dominionenterprises/mongo-queue-php.svg?style=flat)](https://packagist.org/packages/dominionenterprises/mongo-queue-php)
@@ -19,6 +18,7 @@ Adheres to the 1.0.0 [specification](https://github.com/dominionenterprises/mong
  * Message priority
  * Delayed messages
  * Running message timeout and redeliver
+ * Prolong message timeout (while processing message)
  * Atomic acknowledge and send together
  * Easy index creation based only on payload
 

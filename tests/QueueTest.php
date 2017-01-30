@@ -485,6 +485,46 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame(1, $this->collection->count(['running' => false]));
     }
+    
+    /**
+     * @test
+     * @covers ::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
+     */
+    public function resetStuckWithResetCallback()
+    {
+        $messageOne = ['key' => 0];
+        $messageTwo = ['key' => 1];
+
+        $this->queue->send($messageOne);
+        $this->queue->send($messageTwo);
+    
+        //sets to running
+        $this->collection->update(
+            ['payload.key' => 0],
+            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]
+        );
+        $this->collection->update(
+            ['payload.key' => 1],
+            ['$set' => ['running' => true, 'resetTimestamp' => new \MongoDate()]]
+        );
+    
+        $this->assertSame(2, $this->collection->count(['running' => true]));
+    
+        //sets resetTimestamp on messageOne
+        $messageOneGet = $this->queue->get($messageOne, 0, 0);
+    
+        $countResetCallbackInvokes = 0;
+        $resetCallback = function ($msg) use (&$countResetCallbackInvokes, $messageOneGet) {
+            $countResetCallbackInvokes++;
+            $this->assertEquals($messageOneGet['id']->{'$id'}, $msg['_id']->{'$id'});
+        };
+        //resets and gets messageOne
+        $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0, 200, $resetCallback));
+    
+        $this->assertSame(1, $this->collection->count(['running' => false]));
+        $this->assertSame(1, $countResetCallbackInvokes);
+    }
 
     /**
      * @test
@@ -549,6 +589,45 @@ final class QueueTest extends \PHPUnit_Framework_TestCase
         $queueElement = $this->collection->findOne();
         $this->assertLessThanOrEqual(time() + $newResetDuration, $queueElement['resetTimestamp']->sec);
         $this->assertGreaterThan(time() + $newResetDuration - 10, $queueElement['resetTimestamp']->sec);
+    }
+    
+    /**
+     * @test
+     * @covers ::updateResetDuration
+     * @uses \DominionEnterprises\Mongo\Queue::get
+     * @uses \DominionEnterprises\Mongo\Queue::send
+     */
+    public function updateResetDurationWithHightResetDuration()
+    {
+        $messageOne = ['key' => 'value'];
+        $this->queue->send($messageOne);
+        $message = $this->queue->get($messageOne, 1000, 0);
+        
+        $newResetDuration = PHP_INT_MAX;
+        $this->queue->updateResetDuration($message, $newResetDuration);
+        
+        $queueElement = $this->collection->findOne();
+        $this->assertEquals(Queue::MONGO_INT32_MAX, $queueElement['resetTimestamp']->sec);
+    }
+    
+    /**
+     * @test
+     * @covers ::updateResetDuration
+     * @expectedException \InvalidArgumentException
+     */
+    public function updateResetDurationWithoutMongoId()
+    {
+        $this->queue->updateResetDuration([], 1);
+    }
+    
+    /**
+     * @test
+     * @covers ::updateResetDuration
+     * @expectedException \InvalidArgumentException
+     */
+    public function updateResetDurationWithInvalidDuration()
+    {
+        $this->queue->updateResetDuration(['id' => new \MongoId()], 1.1);
     }
 
     /**
