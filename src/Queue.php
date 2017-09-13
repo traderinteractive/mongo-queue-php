@@ -194,7 +194,7 @@ final class Queue implements QueueInterface
             //older mongo extension
             if ($message !== null && array_key_exists('_id', $message)) {
                 // findOneAndUpdate does not correctly return result according to typeMap options so just refetch.
-                $message = $this->collection->findOne(['_id' => $message->_id]);
+                $message = $this->collection->findOne(['_id' => $message['_id']]);
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
                 return ['id' => $message['_id']] + (array)$message['payload'];
             }
