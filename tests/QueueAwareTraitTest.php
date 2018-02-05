@@ -1,7 +1,9 @@
 <?php
 namespace TraderInteractiveTest\Mongo;
 
-class QueueAwareTraitTest extends \PHPUnit_Framework_TestCase
+use PHPUnit\Framework\TestCase;
+
+class QueueAwareTraitTest extends TestCase
 {
     /**
      * Verify basic behavior of setQueue().
