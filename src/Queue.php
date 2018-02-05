@@ -175,7 +175,8 @@ final class Queue implements QueueInterface
         $resetTimestamp = min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
 
         $update = ['$set' => ['earliestGet' => new UTCDateTime($resetTimestamp)]];
-        $options = ['sort' => ['priority' => 1, 'created' => 1]];
+        $findOneAndUpdateOptions = ['sort' => ['priority' => 1, 'created' => 1]];
+        $findOneOptions = ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']];
 
         //ints overflow to floats, should be fine
         $end = microtime(true) + ($waitDurationInMillis / 1000.0);
@@ -189,14 +190,14 @@ final class Queue implements QueueInterface
         }   //@codeCoverageIgnoreEnd
 
         while (true) {
-            $message = $this->collection->findOneAndUpdate($completeQuery, $update, $options);
-            //checking if _id exist because findAndModify doesnt seem to return null when it can't match the query on
-            //older mongo extension
-            if ($message !== null && array_key_exists('_id', $message)) {
+            $id = $this->getIdFromMessage(
+                $this->collection->findOneAndUpdate($completeQuery, $update, $findOneAndUpdateOptions)
+            );
+            if ($id !== null) {
                 // findOneAndUpdate does not correctly return result according to typeMap options so just refetch.
-                $message = $this->collection->findOne(['_id' => $message->_id]);
+                $message = $this->collection->findOne(['_id' => $id], $findOneOptions);
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
-                return ['id' => $message['_id']] + (array)$message['payload'];
+                return ['id' => $id] + $message['payload'];
             }
 
             if (microtime(true) >= $end) {
@@ -210,6 +211,19 @@ final class Queue implements QueueInterface
         //@codeCoverageIgnoreStart
     }
     //@codeCoverageIgnoreEnd
+
+    private function getIdFromMessage($message)
+    {
+        if (is_array($message)) {
+            return array_key_exists('_id', $message) ? $message['_id'] : null;
+        }
+
+        if (is_object($message)) {
+            return isset($message->_id) ? $message->_id : null;
+        }
+
+        return null;
+    }
 
     /**
      * Count queue messages.
