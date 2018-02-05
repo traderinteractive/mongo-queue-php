@@ -28,9 +28,9 @@
 	    "mongodb/mongodb": "^1.0.0"
     },
     "require-dev": {
-        "squizlabs/php_codesniffer": "~2.0",
         "phpunit/phpunit": "^5.5",
-        "satooshi/php-coveralls": "^1.0"
+        "php-coveralls/php-coveralls": "^1.0"
+        "squizlabs/php_codesniffer": "~2.0"
     },
     "autoload": {
         "psr-4": { "DominionEnterprises\\Mongo\\": "src/" }
