@@ -186,7 +186,10 @@ final class Queue implements QueueInterface
         $resetTimestamp = min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
 
         $update = ['$set' => ['resetTimestamp' => new \MongoDB\BSON\UTCDateTime($resetTimestamp), 'running' => true]];
-        $options = ['sort' => ['priority' => 1, 'created' => 1]];
+        $options = [
+            'sort' => ['priority' => 1, 'created' => 1],
+            'typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array'],
+        ];
 
         //ints overflow to floats, should be fine
         $end = microtime(true) + ($waitDurationInMillis / 1000.0);
@@ -205,7 +208,7 @@ final class Queue implements QueueInterface
             //older mongo extension
             if ($message !== null && array_key_exists('_id', $message)) {
                 // findOneAndUpdate does not correctly return result according to typeMap options so just refetch.
-                $message = $this->collection->findOne(['_id' => $message->_id]);
+                $message = $this->collection->findOne(['_id' => $message['_id']]);
                 //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
                 return ['id' => $message['_id']] + (array)$message['payload'];
             }
