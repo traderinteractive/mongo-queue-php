@@ -2,18 +2,10 @@ language: php
 php:
   - 7.0
   - 5.6
-env:
-  - DB_PACKAGE=mongodb-10gen
-  - DB_PACKAGE=mongodb-org
-before_install:
-  - "sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10"
-  - "echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list"
-  - "sudo apt-get update"
-  - "sudo apt-get install ${DB_PACKAGE}"
+services:
+  - mongodb
 before_script:
   - composer self-update
-  - printf "\n" | pecl install --force mongodb
-    # wait for mongo, start is only needed for 2.4 package, see http://tldp.org/LDP/abs/html/devref1.html for description of this syntax.
-  - sudo service mongodb start; bash -c 'while ! exec 6<>/dev/tcp/localhost/27017; do echo "$(date) - still trying to connect to mongo"; sleep 1; done'
+  - yes '' | pecl install -f mongodb-1.1
 script: ./build.php
 after_script: ./vendor/bin/coveralls -v
