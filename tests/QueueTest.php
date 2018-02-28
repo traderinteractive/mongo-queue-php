@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * @coversDefaultClass \TraderInteractive\Mongo\Queue
  * @covers ::<private>
+ * @covers ::__construct
  */
 final class QueueTest extends TestCase
 {
@@ -575,21 +576,13 @@ final class QueueTest extends TestCase
 
         $this->queue->ackSend($messageToAck, [], PHP_INT_MAX);
 
-        $expected = [
-            'payload' => [],
-            'earliestGet' => Queue::MONGO_INT32_MAX,
-            'priority' => 0.0,
-        ];
-
-        $message = $this->collection->findOne();
-
-        $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
-        $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
-
-        unset($message['_id'], $message['created']);
-        $message['earliestGet'] = (int)$message['earliestGet']->__toString();
-
-        $this->assertSame($expected, $message);
+        $this->assertSingleMessage(
+            [
+                'payload' => [],
+                'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
+                'priority' => 0.0,
+            ]
+        );
     }
 
     /**
@@ -602,24 +595,13 @@ final class QueueTest extends TestCase
 
         $this->queue->ackSend($messageToAck, [], -1);
 
-        $expected = [
-            'payload' => [],
-            'running' => false,
-            'resetTimestamp' => Queue::MONGO_INT32_MAX,
-            'earliestGet' => 0,
-            'priority' => 0.0,
-        ];
-
-        $message = $this->collection->findOne();
-
-        $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
-        $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
-
-        unset($message['_id'], $message['created']);
-        $message['resetTimestamp'] = (int)$message['resetTimestamp']->__toString();
-        $message['earliestGet'] = (int)$message['earliestGet']->__toString();
-
-        $this->assertSame($expected, $message);
+        $this->assertSingleMessage(
+            [
+                'payload' => [],
+                'earliestGet' => 0,
+                'priority' => 0.0,
+            ]
+        );
     }
 
     /**
@@ -661,21 +643,13 @@ final class QueueTest extends TestCase
         $payload = ['key1' => 0, 'key2' => true];
         $this->queue->send($payload, 34, 0.8);
 
-        $expected = [
-            'payload' => $payload,
-            'earliestGet' => 34,
-            'priority' => 0.8,
-        ];
-
-        $message = $this->collection->findOne();
-
-        $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
-        $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
-
-        unset($message['_id'], $message['created']);
-        $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
-
-        $this->assertSame($expected, $message);
+        $this->assertSingleMessage(
+            [
+                'payload' => $payload,
+                'earliestGet' => 34,
+                'priority' => 0.8,
+            ]
+        );
     }
 
     /**
@@ -696,21 +670,13 @@ final class QueueTest extends TestCase
     {
         $this->queue->send([], PHP_INT_MAX);
 
-        $expected = [
-            'payload' => [],
-            'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
-            'priority' => 0.0,
-        ];
-
-        $message = $this->collection->findOne();
-
-        $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
-        $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
-
-        unset($message['_id'], $message['created']);
-        $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
-
-        $this->assertSame($expected, $message);
+        $this->assertSingleMessage(
+            [
+                'payload' => [],
+                'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
+                'priority' => 0.0,
+            ]
+        );
     }
 
     /**
@@ -721,21 +687,13 @@ final class QueueTest extends TestCase
     {
         $this->queue->send([], -1);
 
-        $expected = [
-            'payload' => [],
-            'earliestGet' => 0,
-            'priority' => 0.0,
-        ];
-
-        $message = $this->collection->findOne();
-
-        $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
-        $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
-
-        unset($message['_id'], $message['created']);
-        $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
-
-        $this->assertSame($expected, $message);
+        $this->assertSingleMessage(
+            [
+                'payload' => [],
+                'earliestGet' => 0,
+                'priority' => 0.0,
+            ]
+        );
     }
 
     /**
@@ -748,33 +706,32 @@ final class QueueTest extends TestCase
      */
     public function constructWithCollection()
     {
-        $mongo = new \MongoDB\Client(
-            $this->mongoUrl,
-            [],
-            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
-        );
-        $collection = $mongo->selectDatabase('testing')->selectCollection('custom_collection');
-        $collection->drop();
-        $queue = new Queue($collection);
+        $queue = new Queue($this->collection);
 
         $payload = ['key1' => 0, 'key2' => true];
         $queue->send($payload, 34, 0.8);
 
-        $expected = [
-            'payload' => $payload,
-            'earliestGet' => 34,
-            'priority' => 0.8,
-        ];
+        $this->assertSingleMessage(
+            [
+                'payload' => $payload,
+                'earliestGet' => 34,
+                'priority' => 0.8,
+            ]
+        );
 
-        $this->assertSame(1, $collection->count());
+    }
 
-        $message = $collection->findOne();
+    private function assertSingleMessage(array $expected)
+    {
+        $this->assertSame(1, $this->collection->count());
+
+        $message = $this->collection->findOne();
 
         $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
         $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
 
         unset($message['_id'], $message['created']);
-        $message['earliestGet'] = $message['earliestGet']->toDateTime()->getTimestamp();
+        $message['earliestGet'] = (int)$message['earliestGet']->toDateTime()->getTimestamp();
 
         $this->assertSame($expected, $message);
     }
