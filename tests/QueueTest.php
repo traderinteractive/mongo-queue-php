@@ -18,7 +18,11 @@ final class QueueTest extends TestCase
     public function setUp()
     {
         $this->mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
-        $mongo = new \MongoDB\Client($this->mongoUrl, [], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]);
+        $mongo = new \MongoDB\Client(
+            $this->mongoUrl,
+            [],
+            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
+        );
         $this->collection = $mongo->selectDatabase('testing')->selectCollection('messages');
         $this->collection->drop();
 
@@ -475,12 +479,22 @@ final class QueueTest extends TestCase
             ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime(time() * 1000)]]
         );
 
-        $this->assertSame(2, $this->collection->count(['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]));
+        $this->assertSame(
+            2,
+            $this->collection->count(
+                ['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
+            )
+        );
 
         //resets and gets messageOne
         $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
 
-        $this->assertSame(1, $this->collection->count(['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]));
+        $this->assertSame(
+            1,
+            $this->collection->count(
+                ['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
+            )
+        );
     }
 
     /**
@@ -854,7 +868,11 @@ final class QueueTest extends TestCase
      */
     public function constructWithCollection()
     {
-        $mongo = new \MongoDB\Client($this->mongoUrl, [], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]);
+        $mongo = new \MongoDB\Client(
+            $this->mongoUrl,
+            [],
+            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
+        );
         $collection = $mongo->selectDatabase('testing')->selectCollection('custom_collection');
         $collection->drop();
         $queue = new Queue($collection);
