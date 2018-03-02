@@ -1,11 +1,11 @@
 <?php
 
-namespace DominionEnterprises\Mongo;
+namespace TraderInteractive\Mongo;
 
 use MongoDB\BSON\UTCDateTime;
 
 /**
- * @coversDefaultClass \DominionEnterprises\Mongo\Queue
+ * @coversDefaultClass \TraderInteractive\Mongo\Queue
  * @covers ::<private>
  */
 final class QueueTest extends \PHPUnit_Framework_TestCase

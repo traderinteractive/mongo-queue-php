@@ -1,6 +1,6 @@
 <?php
 
-namespace DominionEnterprises\Mongo;
+namespace TraderInteractive\Mongo;
 
 /**
  * Abstraction of mongo db collection as priority queue.

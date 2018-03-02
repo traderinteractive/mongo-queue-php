@@ -1,9 +1,9 @@
 <?php
 /**
- * Defines the DominionEnterprises\Mongo\Queue class.
+ * Defines the TraderInteractive\Mongo\Queue class.
  */
 
-namespace DominionEnterprises\Mongo;
+namespace TraderInteractive\Mongo;
 
 use MongoDB\BSON\UTCDateTime;
 

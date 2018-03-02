@@ -1,6 +1,6 @@
 <?php
 
-namespace DominionEnterprises\Mongo;
+namespace TraderInteractive\Mongo;
 
 /**
  * Interface for QueueInterface dependency injection.

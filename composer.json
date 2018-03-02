@@ -33,6 +33,6 @@
         "squizlabs/php_codesniffer": "~2.0"
     },
     "autoload": {
-        "psr-4": { "DominionEnterprises\\Mongo\\": "src/" }
+        "psr-4": { "TraderInteractive\\Mongo\\": "src/" }
     }
 }
