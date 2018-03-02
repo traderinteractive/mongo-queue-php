@@ -1,5 +1,5 @@
 {
-    "name": "dominionenterprises/mongo-queue-php",
+    "name": "traderinteractive/mongo-queue-php",
     "description": "Message queue using MongoDB as a backend",
     "keywords": ["mongo", "priority", "queue", "message", "messaging"],
     "authors": [
