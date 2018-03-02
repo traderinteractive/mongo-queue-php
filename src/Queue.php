@@ -38,7 +38,7 @@ final class Queue implements QueueInterface
      *
      * @throws \InvalidArgumentException $collectionOrUrl, $db or $collection was not a string
      */
-    public function __construct($collectionOrUrl, $db = null, $collection = null)
+    public function __construct($collectionOrUrl, string $db = null, string $collection = null)
     {
         if ($collectionOrUrl instanceof \MongoDB\Collection) {
             $this->collection = $collectionOrUrl;
@@ -49,15 +49,11 @@ final class Queue implements QueueInterface
             throw new \InvalidArgumentException('$collectionOrUrl was not a string');
         }
 
-        if (!is_string($db)) {
-            throw new \InvalidArgumentException('$db was not a string');
-        }
-
-        if (!is_string($collection)) {
-            throw new \InvalidArgumentException('$collection was not a string');
-        }
-
-        $mongo = new \MongoDB\Client($collectionOrUrl, [], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]);
+        $mongo = new \MongoDB\Client(
+            $collectionOrUrl,
+            [],
+            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
+        );
         $mongoDb = $mongo->selectDatabase($db);
         $this->collection = $mongoDb->selectCollection($collection);
     }

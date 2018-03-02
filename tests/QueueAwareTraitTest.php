@@ -33,7 +33,6 @@ class QueueAwareTraitTest extends TestCase
     public function getQueue()
     {
         $mockQueue = $this->getObjectForTrait('\TraderInteractive\Mongo\QueueAwareTrait');
-        $this->assertNull($mockQueue->getQueue());
         $mongoQueue = $this->getMockBuilder('\\TraderInteractive\\Mongo\\QueueInterface')->getMock();
         $mockQueue->setQueue($mongoQueue);
         $this->assertEquals($mongoQueue, $mockQueue->getQueue());

@@ -19,7 +19,7 @@ trait QueueAwareTrait
      *
      * @return QueueInterface
      */
-    public function getQueue()
+    public function getQueue() : QueueInterface
     {
         return $this->mongoQueue;
     }

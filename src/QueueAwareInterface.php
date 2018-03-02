@@ -12,7 +12,7 @@ interface QueueAwareInterface
      *
      * @return QueueInterface
      */
-    public function getQueue();
+    public function getQueue() : QueueInterface;
 
     /**
      * Sets the QueueInterface instance.
