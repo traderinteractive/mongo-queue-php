@@ -166,120 +166,52 @@ abstract class AbstractQueue
     /**
      * Acknowledge a message was processed and remove from queue.
      *
-     * @param array $message message received from get()
+     * @param Message $message message received from get()
      *
      * @return void
-     *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a MongoDB\BSON\ObjectID
      */
-    final public function ack(array $message)
+    final public function ack(Message $message)
     {
-        $id = null;
-        if (array_key_exists('id', $message)) {
-            $id = $message['id'];
-        }
-
-        if (!(is_a($id, 'MongoDB\BSON\ObjectID'))) {
-            throw new \InvalidArgumentException('$message does not have a field "id" that is a ObjectID');
-        }
-
-        $this->collection->deleteOne(['_id' => $id]);
+        $this->collection->deleteOne(['_id' => $message->getId()]);
     }
 
     /**
      * Atomically acknowledge and send a message to the queue.
      *
-     * @param array $message the message to ack received from get()
-     * @param array $payload the data to store in the message to send. Data is handled same way
-     *                       as \MongoDB\Collection::insertOne()
-     * @param int $earliestGet earliest unix timestamp the message can be retreived.
-     * @param float $priority priority for order out of get(). 0 is higher priority than 1
-     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
+     * @param Message $message message received from get().
      *
      * @return void
-     *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
-     * @throws \InvalidArgumentException $priority is NaN
      */
-    final public function ackSend(
-        array $message,
-        array $payload,
-        int $earliestGet = 0,
-        float $priority = 0.0,
-        bool $newTimestamp = true
-    ) {
-        $id = $message['id'] ?? null;
-
-        $this->throwIfTrue(!is_a($id, ObjectID::class), '$message does not have a field "id" that is a ObjectID');
-        $this->throwIfTrue(is_nan($priority), '$priority was NaN');
-
-        $toSet = [
-            'payload' => $payload,
-            'earliestGet' => $this->getEarliestGetAsUTCDateTime($earliestGet),
-            'priority' => $priority,
+    final public function requeue(Message $message)
+    {
+        $set = [
+            'payload' => $message->getPayload(),
+            'earliestGet' => $message->getEarliestGet(),
+            'priority' => $message->getPriority(),
+            'created' => new UTCDateTime(),
         ];
-        if ($newTimestamp) {
-            $toSet['created'] = new UTCDateTime((int)(microtime(true) * 1000));
-        }
 
-        //using upsert because if no documents found then the doc was removed (SHOULD ONLY HAPPEN BY SOMEONE MANUALLY)
-        //so we can just send
-        $this->collection->updateOne(['_id' => $id], ['$set' => $toSet], ['upsert' => true]);
-    }
-
-    /**
-     * Requeue message to the queue. Same as ackSend() with the same message.
-     *
-     * @param array $message message received from get().
-     * @param int $earliestGet earliest unix timestamp the message can be retreived.
-     * @param float $priority priority for order out of get(). 0 is higher priority than 1
-     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
-     *
-     * @return void
-     *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
-     * @throws \InvalidArgumentException priority is NaN
-     */
-    final public function requeue(
-        array $message,
-        int $earliestGet = 0,
-        float $priority = 0.0,
-        bool $newTimestamp = true
-    ) {
-        $forRequeue = $message;
-        unset($forRequeue['id']);
-        $this->ackSend($message, $forRequeue, $earliestGet, $priority, $newTimestamp);
+        $this->collection->updateOne(['_id' => $message->getId()], ['$set' => $set], ['upsert' => true]);
     }
 
     /**
      * Send a message to the queue.
      *
-     * @param array $payload the data to store in the message. Data is handled same way
-     *                       as \MongoDB\Collection::insertOne()
-     * @param int $earliestGet earliest unix timestamp the message can be retreived.
-     * @param float $priority priority for order out of get(). 0 is higher priority than 1
+     * @param Message $message The message to send.
      *
      * @return void
-     *
-     * @throws \InvalidArgumentException $priority is NaN
      */
-    final public function send(array $payload, int $earliestGet = 0, float $priority = 0.0)
+    final public function send(Message $message)
     {
-        if (is_nan($priority)) {
-            throw new \InvalidArgumentException('$priority was NaN');
-        }
-
-        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
-        $earliestGet = min(max(0, $earliestGet * 1000), self::MONGO_INT32_MAX);
-
-        $message = [
-            'payload' => $payload,
-            'earliestGet' => new UTCDateTime($earliestGet),
-            'priority' => $priority,
-            'created' => new UTCDateTime((int)(microtime(true) * 1000)),
+        $document = [
+            '_id' => $message->getId(),
+            'payload' => $message->getPayload(),
+            'earliestGet' => $message->getEarliestGet(),
+            'priority' => $message->getPriority(),
+            'created' => new UTCDateTime(),
         ];
 
-        $this->collection->insertOne($message);
+        $this->collection->insertOne($document);
     }
 
     /**
@@ -342,7 +274,7 @@ abstract class AbstractQueue
 
     private function tryFindOneAndUpdate(array $query, array $update, ArrayObject $messages) : bool
     {
-        $findOneAndUpdateOptions = ['sort' => ['priority' => 1, 'created' => 1]];
+        $findOneAndUpdateOptions = ['sort' => ['priority' => 1]];
         $findOneOptions = ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']];
 
         $id = $this->getIdFromMessage(
@@ -454,12 +386,5 @@ abstract class AbstractQueue
             $reflectionClass = new \ReflectionClass($exceptionClass);
             throw $reflectionClass->newInstanceArgs([$message]);
         }
-    }
-
-    private function getEarliestGetAsUTCDateTime(int $timestamp) : UTCDateTime
-    {
-        //Ensure $earliestGet is between 0 and MONGO_INT32_MAX
-        $earliestGet = min(max(0, $timestamp * 1000), self::MONGO_INT32_MAX);
-        return new UTCDateTime($earliestGet);
     }
 }

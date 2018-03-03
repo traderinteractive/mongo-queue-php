@@ -2,7 +2,9 @@
 
 namespace TraderInteractive\Mongo;
 
+use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
+use MongoDB\Client;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,15 +21,20 @@ final class QueueTest extends TestCase
     public function setUp()
     {
         $this->mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
-        $mongo = new \MongoDB\Client(
+        $mongo = new Client(
             $this->mongoUrl,
             [],
             ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
         );
         $this->collection = $mongo->selectDatabase('testing')->selectCollection('messages');
-        $this->collection->drop();
+        $this->collection->deleteMany([]);
 
-        $this->queue = new Queue($this->mongoUrl, 'testing', 'messages');
+        $this->queue = new Queue($this->collection);
+    }
+
+    public function tearDown()
+    {
+        (new Client($this->mongoUrl))->dropDatabase('testing');
     }
 
     /**
@@ -46,10 +53,12 @@ final class QueueTest extends TestCase
      */
     public function ensureGetIndex()
     {
-        $this->queue->ensureGetIndex(['type' => 1], ['boo' => -1]);
-        $this->queue->ensureGetIndex(['another.sub' => 1]);
+        $collection = (new Client($this->mongoUrl))->selectDatabase('testing')->selectCollection(uniqid());
+        $queue = new Queue($collection);
+        $queue->ensureGetIndex(['type' => 1], ['boo' => -1]);
+        $queue->ensureGetIndex(['another.sub' => 1]);
 
-        $indexes = iterator_to_array($this->collection->listIndexes());
+        $indexes = iterator_to_array($collection->listIndexes());
         $this->assertSame(3, count($indexes));
 
         $expectedOne = [
@@ -148,10 +157,12 @@ final class QueueTest extends TestCase
      */
     public function ensureCountIndex()
     {
-        $this->queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
-        $this->queue->ensureCountIndex(['another.sub' => 1], true);
+        $collection = (new Client($this->mongoUrl))->selectDatabase('testing')->selectCollection(uniqid());
+        $queue = new Queue($collection);
+        $queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
+        $queue->ensureCountIndex(['another.sub' => 1], true);
 
-        $indexes = iterator_to_array($this->collection->listIndexes());
+        $indexes = iterator_to_array($collection->listIndexes());
         $this->assertSame(3, count($indexes));
 
         $expectedOne = ['payload.type' => 1, 'payload.boo' => -1];
@@ -203,7 +214,7 @@ final class QueueTest extends TestCase
      */
     public function getByBadQuery()
     {
-        $this->queue->send(['key1' => 0, 'key2' => true]);
+        $this->queue->send($this->getMessage(['key1' => 0, 'key2' => true]));
 
         $result = $this->queue->get(['key3' => 0], PHP_INT_MAX, 0);
         $this->assertSame([], $result);
@@ -217,7 +228,7 @@ final class QueueTest extends TestCase
      */
     public function getWithNegativePollDuration()
     {
-        $this->queue->send(['key1' => 0]);
+        $this->queue->send($this->getMessage(['key1' => 0]));
         $this->assertNotNull($this->queue->get([], 0, 0, -1));
     }
 
@@ -237,17 +248,15 @@ final class QueueTest extends TestCase
      */
     public function getByFullQuery()
     {
-        $messageOne = ['id' => 'SHOULD BE REMOVED', 'key1' => 0, 'key2' => true];
+        $messageOne = $this->getMessage(['key1' => 0, 'key2' => true]);
 
         $this->queue->send($messageOne);
-        $this->queue->send(['key' => 'value']);
+        $this->queue->send($this->getMessage(['key' => 'value']));
 
-        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
+        $result = $this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0)[0];
 
-        $this->assertNotSame($messageOne['id'], $result['id']);
-
-        $messageOne['id'] = $result['id'];
-        $this->assertSame($messageOne, $result);
+        $this->assertSame((string)$messageOne->getId(), (string)$result->getId());
+        $this->assertSame($messageOne->getPayload(), $result->getPayload());
     }
 
     /**
@@ -256,22 +265,24 @@ final class QueueTest extends TestCase
      */
     public function getBySubDocQuery()
     {
-        $messageTwo = [
-            'one' => [
-                'two' => [
-                    'three' => 5,
+        $expected = $this->getMessage(
+            [
+                'one' => [
+                    'two' => [
+                        'three' => 5,
+                        'notused' => 'notused',
+                    ],
                     'notused' => 'notused',
                 ],
                 'notused' => 'notused',
-            ],
-            'notused' => 'notused',
-        ];
+            ]
+        );
 
-        $this->queue->send(['key1' => 0, 'key2' => true]);
-        $this->queue->send($messageTwo);
+        $this->queue->send($this->getMessage(['key1' => 0, 'key2' => true]));
+        $this->queue->send($expected);
 
-        $result = $this->queue->get(['one.two.three' => ['$gt' => 4]], PHP_INT_MAX, 0)[0];
-        $this->assertSame(['id' => $result['id']] + $messageTwo, $result);
+        $actual = $this->queue->get(['one.two.three' => ['$gt' => 4]], PHP_INT_MAX, 0)[0];
+        $this->assertSameMessage($expected, $actual);
     }
 
     /**
@@ -280,15 +291,15 @@ final class QueueTest extends TestCase
      */
     public function getBeforeAck()
     {
-        $messageOne = ['key1' => 0, 'key2' => true];
+        $messageOne = $this->getMessage(['key1' => 0, 'key2' => true]);
 
         $this->queue->send($messageOne);
-        $this->queue->send(['key' => 'value']);
+        $this->queue->send($this->getMessage(['key' => 'value']));
 
-        $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0);
 
         //try get message we already have before ack
-        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $result = $this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0);
         $this->assertSame([], $result);
     }
 
@@ -298,21 +309,19 @@ final class QueueTest extends TestCase
      */
     public function getWithCustomPriority()
     {
-        $messageOne = ['key' => 0];
-        $messageTwo = ['key' => 1];
-        $messageThree = ['key' => 2];
+        $messageOne = $this->getMessage(['key' => 0], null, 0.5);
+        $messageTwo = $this->getMessage(['key' => 1], null, 0.4);
+        $messageThree = $this->getMessage(['key' => 2], null, 0.3);
 
-        $this->queue->send($messageOne, 0, 0.5);
-        $this->queue->send($messageTwo, 0, 0.4);
-        $this->queue->send($messageThree, 0, 0.3);
+        $this->queue->send($messageOne);
+        $this->queue->send($messageTwo);
+        $this->queue->send($messageThree);
 
-        $resultOne = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $resultThree = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $messages = $this->queue->get([], PHP_INT_MAX, 3000, 200, 10);
 
-        $this->assertSame(['id' => $resultOne['id']] + $messageThree, $resultOne);
-        $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
-        $this->assertSame(['id' => $resultThree['id']] + $messageOne, $resultThree);
+        $this->assertSameMessage($messageThree, $messages[0]);
+        $this->assertSameMessage($messageTwo, $messages[1]);
+        $this->assertSameMessage($messageOne, $messages[2]);
     }
 
     /**
@@ -321,48 +330,19 @@ final class QueueTest extends TestCase
      */
     public function getWithTimeBasedPriority()
     {
-        $messageOne = ['key' => 0];
-        $messageTwo = ['key' => 1];
-        $messageThree = ['key' => 2];
+        $messageOne = $this->getMessage(['key' => 0]);
+        $messageTwo = $this->getMessage(['key' => 1]);
+        $messageThree = $this->getMessage(['key' => 2]);
 
         $this->queue->send($messageOne);
         $this->queue->send($messageTwo);
         $this->queue->send($messageThree);
 
-        $resultOne = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $resultThree = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $messages = $this->queue->get([], PHP_INT_MAX, 3000, 200, 10);
 
-        $this->assertSame(['id' => $resultOne['id']] + $messageOne, $resultOne);
-        $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
-        $this->assertSame(['id' => $resultThree['id']] + $messageThree, $resultThree);
-    }
-
-    /**
-     * @test
-     * @covers ::get
-     */
-    public function getWithTimeBasedPriorityWithOldTimestamp()
-    {
-        $messageOne = ['key' => 0];
-        $messageTwo = ['key' => 1];
-        $messageThree = ['key' => 2];
-
-        $this->queue->send($messageOne);
-        $this->queue->send($messageTwo);
-        $this->queue->send($messageThree);
-
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        //ensuring using old timestamp shouldn't affect normal time order of send()s
-        $this->queue->requeue($resultTwo, 0, 0.0, false);
-
-        $resultOne = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $resultThree = $this->queue->get([], PHP_INT_MAX, 0)[0];
-
-        $this->assertSame(['id' => $resultOne['id']] + $messageOne, $resultOne);
-        $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
-        $this->assertSame(['id' => $resultThree['id']] + $messageThree, $resultThree);
+        $this->assertSameMessage($messageOne, $messages[0]);
+        $this->assertSameMessage($messageTwo, $messages[1]);
+        $this->assertSameMessage($messageThree, $messages[2]);
     }
 
     /**
@@ -387,15 +367,18 @@ final class QueueTest extends TestCase
      */
     public function earliestGet()
     {
-         $messageOne = ['key1' => 0, 'key2' => true];
+         $messageOne = $this->getMessage(
+             ['key1' => 0, 'key2' => true],
+             new UTCDateTime((time() + 1) * 1000)
+         );
 
-         $this->queue->send($messageOne, time() + 1);
+         $this->queue->send($messageOne);
 
-         $this->assertSame([], $this->queue->get($messageOne, PHP_INT_MAX, 0));
+         $this->assertSame([], $this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0));
 
          sleep(1);
 
-         $this->assertCount(1, $this->queue->get($messageOne, PHP_INT_MAX, 0));
+         $this->assertCount(1, $this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0));
     }
 
     /**
@@ -404,8 +387,8 @@ final class QueueTest extends TestCase
      */
     public function resetStuck()
     {
-        $messageOne = ['key' => 0];
-        $messageTwo = ['key' => 1];
+        $messageOne = $this->getMessage(['key' => 0]);
+        $messageTwo = $this->getMessage(['key' => 1]);
 
         $this->queue->send($messageOne);
         $this->queue->send($messageTwo);
@@ -413,27 +396,27 @@ final class QueueTest extends TestCase
         //sets to running
         $this->collection->updateOne(
             ['payload.key' => 0],
-            ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime(time() * 1000)]]
+            ['$set' => ['earliestGet' => new UTCDateTime(time() * 1000)]]
         );
         $this->collection->updateOne(
             ['payload.key' => 1],
-            ['$set' => ['earliestGet' => new \MongoDB\BSON\UTCDateTime(time() * 1000)]]
+            ['$set' => ['earliestGet' => new UTCDateTime(time() * 1000)]]
         );
 
         $this->assertSame(
             2,
             $this->collection->count(
-                ['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
+                ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]]
             )
         );
 
         //resets and gets messageOne
-        $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
+        $this->assertNotNull($this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0));
 
         $this->assertSame(
             1,
             $this->collection->count(
-                ['earliestGet' => ['$lte' => new \MongoDB\BSON\UTCDateTime((int)(microtime(true) * 1000))]]
+                ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]]
             )
         );
     }
@@ -454,21 +437,21 @@ final class QueueTest extends TestCase
      */
     public function testCount()
     {
-        $message = ['boo' => 'scary'];
+        $message = $this->getMessage(['boo' => 'scary']);
 
-        $this->assertSame(0, $this->queue->count($message, true));
-        $this->assertSame(0, $this->queue->count($message, false));
-        $this->assertSame(0, $this->queue->count($message));
+        $this->assertSame(0, $this->queue->count($message->getPayload(), true));
+        $this->assertSame(0, $this->queue->count($message->getPayload(), false));
+        $this->assertSame(0, $this->queue->count($message->getPayload()));
 
         $this->queue->send($message);
-        $this->assertSame(1, $this->queue->count($message, false));
-        $this->assertSame(0, $this->queue->count($message, true));
-        $this->assertSame(1, $this->queue->count($message));
+        $this->assertSame(1, $this->queue->count($message->getPayload(), false));
+        $this->assertSame(0, $this->queue->count($message->getPayload(), true));
+        $this->assertSame(1, $this->queue->count($message->getPayload()));
 
-        $this->queue->get($message, PHP_INT_MAX, 0);
-        $this->assertSame(0, $this->queue->count($message, false));
-        $this->assertSame(1, $this->queue->count($message, true));
-        $this->assertSame(1, $this->queue->count($message));
+        $this->queue->get($message->getPayload(), PHP_INT_MAX, 0);
+        $this->assertSame(0, $this->queue->count($message->getPayload(), false));
+        $this->assertSame(1, $this->queue->count($message->getPayload(), true));
+        $this->assertSame(1, $this->queue->count($message->getPayload()));
     }
 
     /**
@@ -477,12 +460,12 @@ final class QueueTest extends TestCase
      */
     public function ack()
     {
-        $messageOne = ['key1' => 0, 'key2' => true];
+        $messageOne = $this->getMessage(['key1' => 0, 'key2' => true]);
 
         $this->queue->send($messageOne);
-        $this->queue->send(['key' => 'value']);
+        $this->queue->send($this->getMessage(['key' => 'value']));
 
-        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
+        $result = $this->queue->get($messageOne->getPayload(), PHP_INT_MAX, 0)[0];
         $this->assertSame(2, $this->collection->count());
 
         $this->queue->ack($result);
@@ -491,146 +474,33 @@ final class QueueTest extends TestCase
 
     /**
      * @test
-     * @covers ::ack
-     * @expectedException \InvalidArgumentException
-     */
-    public function ackBadArg()
-    {
-        $this->queue->ack(['id' => new \stdClass()]);
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
-     */
-    public function ackSend()
-    {
-        $messageOne = ['key1' => 0, 'key2' => true];
-        $messageThree = ['hi' => 'there', 'rawr' => 2];
-
-        $this->queue->send($messageOne);
-        $this->queue->send(['key' => 'value']);
-
-        $resultOne = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
-        $this->assertSame(2, $this->collection->count());
-
-        $this->queue->ackSend($resultOne, $messageThree);
-        $this->assertSame(2, $this->collection->count());
-
-        $actual = $this->queue->get(['hi' => 'there'], PHP_INT_MAX, 0)[0];
-        $expected = ['id' => $resultOne['id']] + $messageThree;
-
-        $actual['id'] = $actual['id']->__toString();
-        $expected['id'] = $expected['id']->__toString();
-        $this->assertSame($expected, $actual);
-    }
-
-    /**
-     * Verify earliestGet with ackSend.
-     *
-     * @test
-     * @covers ::ackSend
-     *
-     * @return void
-     */
-    public function ackSendWithEarliestGet()
-    {
-        $message = ['key1' => 0, 'key2' => true];
-        $this->queue->send($message);
-        $result = $this->queue->get([], PHP_INT_MAX, 0)[0];
-        $this->assertSame($message['key1'], $result['key1']);
-        $this->assertSame($message['key2'], $result['key2']);
-        $this->queue->ackSend($result, ['key1' => 1, 'key2' => 2], strtotime('+ 1 day'));
-        $this->assertSame([], $this->queue->get([], PHP_INT_MAX, 0));
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
-     * @expectedException \InvalidArgumentException
-     */
-    public function ackSendWithWrongIdType()
-    {
-        $this->queue->ackSend(['id' => 5], []);
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
-     * @expectedException \InvalidArgumentException
-     */
-    public function ackSendWithNanPriority()
-    {
-        $this->queue->ackSend(['id' => new \MongoDB\BSON\ObjectID()], [], 0, NAN);
-    }
-
-    /**
-     * @test
-     * @covers ::ackSend
-     */
-    public function ackSendWithHighEarliestGet()
-    {
-        $this->queue->send([]);
-        $messageToAck = $this->queue->get([], PHP_INT_MAX, 0)[0];
-
-        $this->queue->ackSend($messageToAck, [], PHP_INT_MAX);
-
-        $this->assertSingleMessage(
-            [
-                'payload' => [],
-                'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
-                'priority' => 0.0,
-            ]
-        );
-    }
-
-    /**
-     * @covers ::ackSend
-     */
-    public function ackSendWithLowEarliestGet()
-    {
-        $this->queue->send([]);
-        $messageToAck = $this->queue->get([], PHP_INT_MAX, 0);
-
-        $this->queue->ackSend($messageToAck, [], -1);
-
-        $this->assertSingleMessage(
-            [
-                'payload' => [],
-                'earliestGet' => 0,
-                'priority' => 0.0,
-            ]
-        );
-    }
-
-    /**
-     * @test
      * @covers ::requeue
      */
     public function requeue()
     {
-        $messageOne = ['key1' => 0, 'key2' => true];
+        $messages = [
+            $this->getMessage(['id' => 1, 'key' => 'value']),
+            $this->getMessage(['id' => 2, 'key' => 'value']),
+            $this->getMessage(['id' => 3, 'key' => 'value']),
+        ];
 
-        $this->queue->send($messageOne);
-        $this->queue->send(['key' => 'value']);
+        foreach ($messages as $message) {
+            $this->queue->send($message);
+        }
 
-        $resultBeforeRequeue = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
+        $query = ['key' => 'value'];
 
-        $this->queue->requeue($resultBeforeRequeue);
-        $this->assertSame(2, $this->collection->count());
+        $message = $this->queue->get($query, PHP_INT_MAX, 0)[0];
 
-        $resultAfterRequeue = $this->queue->get($messageOne, 0)[0];
-        $this->assertSame(['id' => $resultAfterRequeue['id']] + $messageOne, $resultAfterRequeue);
-    }
+        $this->assertSameMessage($messages[0], $message);
 
-    /**
-     * @test
-     * @covers ::requeue
-     * @expectedException \InvalidArgumentException
-     */
-    public function requeueBadArg()
-    {
-        $this->queue->requeue(['id' => new \stdClass()]);
+        $this->queue->requeue($message->withEarliestGet(new UTCDateTime((int)(microtime(true) * 1000))));
+
+        $actual = $this->queue->get($query, PHP_INT_MAX, 3000, 200, 10);
+
+        $this->assertSameMessage($messages[1], $actual[0]);
+        $this->assertSameMessage($messages[2], $actual[1]);
+        $this->assertSameMessage($messages[0], $actual[2]);
     }
 
     /**
@@ -639,26 +509,9 @@ final class QueueTest extends TestCase
      */
     public function send()
     {
-        $payload = ['key1' => 0, 'key2' => true];
-        $this->queue->send($payload, 34, 0.8);
-
-        $this->assertSingleMessage(
-            [
-                'payload' => $payload,
-                'earliestGet' => 34,
-                'priority' => 0.8,
-            ]
-        );
-    }
-
-    /**
-     * @test
-     * @covers ::send
-     * @expectedException \InvalidArgumentException
-     */
-    public function sendWithNanPriority()
-    {
-        $this->queue->send([], 0, NAN);
+        $message = $this->getMessage(['key1' => 0, 'key2' => true], new UTCDateTime(34 * 1000), 0.8);
+        $this->queue->send($message);
+        $this->assertSingleMessage($message);
     }
 
     /**
@@ -667,15 +520,9 @@ final class QueueTest extends TestCase
      */
     public function sendWithHighEarliestGet()
     {
-        $this->queue->send([], PHP_INT_MAX);
-
-        $this->assertSingleMessage(
-            [
-                'payload' => [],
-                'earliestGet' => (new UTCDateTime(Queue::MONGO_INT32_MAX))->toDateTime()->getTimestamp(),
-                'priority' => 0.0,
-            ]
-        );
+        $message = $this->getMessage([], new UTCDateTime(PHP_INT_MAX));
+        $this->queue->send($message);
+        $this->assertSingleMessage($message);
     }
 
     /**
@@ -684,54 +531,35 @@ final class QueueTest extends TestCase
      */
     public function sendWithLowEarliestGet()
     {
-        $this->queue->send([], -1);
-
-        $this->assertSingleMessage(
-            [
-                'payload' => [],
-                'earliestGet' => 0,
-                'priority' => 0.0,
-            ]
-        );
+        $message = $this->getMessage([], new UTCDateTime(0));
+        $this->queue->send($message);
+        $this->assertSingleMessage($message);
     }
 
-    /**
-     * Verify Queue can be constructed with \MongoDB\Collection
-     *
-     * @test
-     * @covers ::__construct
-     *
-     * @return void
-     */
-    public function constructWithCollection()
+    private function assertSameMessage(Message $expected, Message $actual)
     {
-        $queue = new Queue($this->collection);
-
-        $payload = ['key1' => 0, 'key2' => true];
-        $queue->send($payload, 34, 0.8);
-
-        $this->assertSingleMessage(
-            [
-                'payload' => $payload,
-                'earliestGet' => 34,
-                'priority' => 0.8,
-            ]
-        );
-
+        $this->assertSame((string)$expected->getId(), (string)$actual->getId());
+        $this->assertSame($expected->getPayload(), $actual->getPayload());
+        $this->assertSame($expected->getPriority(), $actual->getPriority());
     }
 
-    private function assertSingleMessage(array $expected)
+    private function assertSingleMessage(Message $expected)
     {
         $this->assertSame(1, $this->collection->count());
 
-        $message = $this->collection->findOne();
+        $actual = $this->collection->findOne(
+            [],
+            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
+        );
 
-        $this->assertLessThanOrEqual(time(), $message['created']->toDateTime()->getTimestamp());
-        $this->assertGreaterThan(time() - 10, $message['created']->toDateTime()->getTimestamp());
+        $this->assertSame((string)$expected->getId(), (string)$actual['_id']);
+        $this->assertSame($expected->getPayload(), $actual['payload']);
+        $this->assertSame($expected->getPriority(), $actual['priority']);
+        $this->assertEquals($expected->getEarliestGet(), $actual['earliestGet']);
+    }
 
-        unset($message['_id'], $message['created']);
-        $message['earliestGet'] = (int)$message['earliestGet']->toDateTime()->getTimestamp();
-
-        $this->assertSame($expected, $message);
+    private function getMessage(array $payload = [], UTCDateTime $earliestGet = null, float $priority = 0.0)
+    {
+        return new Message(new ObjectId(), $payload, $earliestGet ?? new UTCDateTime(0), $priority);
     }
 }

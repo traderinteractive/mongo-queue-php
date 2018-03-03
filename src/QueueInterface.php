@@ -2,6 +2,8 @@
 
 namespace TraderInteractive\Mongo;
 
+use MongoDB\BSON\UTCDateTime;
+
 /**
  * Abstraction of mongo db collection as priority queue.
  *
@@ -52,7 +54,7 @@ interface QueueInterface
      * @param int $pollDurationInMillis millisecond duration to wait between polls.
      * @param int $limit The maximum number of messages to return.
      *
-     * @return array Array of messages.
+     * @return Message[] Array of messages.
      *
      * @throws \InvalidArgumentException key in $query was not a string
      */
@@ -81,63 +83,29 @@ interface QueueInterface
     /**
      * Acknowledge a message was processed and remove from queue.
      *
-     * @param array $message message received from get()
+     * @param Message $message message received from get()
      *
      * @return void
-     *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a MongoDB\BSON\ObjectID
      */
-    public function ack(array $message);
+    public function ack(Message $message);
 
     /**
      * Atomically acknowledge and send a message to the queue.
      *
-     * @param array $message the message to ack received from get()
-     * @param array $payload the data to store in the message to send. Data is handled same way
-     *                       as \MongoDB\Collection::insertOne()
-     * @param int $earliestGet earliest unix timestamp the message can be retreived.
-     * @param float $priority priority for order out of get(). 0 is higher priority than 1
-     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
+     * @param Message $message message received from get().
      *
      * @return void
-     *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
-     * @throws \InvalidArgumentException $priority is NaN
      */
-    public function ackSend(
-        array $message,
-        array $payload,
-        int $earliestGet = 0,
-        float $priority = 0.0,
-        bool $newTimestamp = true
-    );
-
-    /**
-     * Requeue message to the queue. Same as ackSend() with the same message.
-     *
-     * @param array $message message received from get().
-     * @param int $earliestGet earliest unix timestamp the message can be retreived.
-     * @param float $priority priority for order out of get(). 0 is higher priority than 1
-     * @param bool $newTimestamp true to give the payload a new timestamp or false to use given message timestamp
-     *
-     * @return void
-     *
-     * @throws \InvalidArgumentException $message does not have a field "id" that is a ObjectID
-     * @throws \InvalidArgumentException priority is NaN
-     */
-    public function requeue(array $message, int $earliestGet = 0, float $priority = 0.0, bool $newTimestamp = true);
+    public function requeue(Message $message);
 
     /**
      * Send a message to the queue.
      *
-     * @param array $payload the data to store in the message. Data is handled same way as
-     *                       \MongoDB\Collection::insertOne()
-     * @param int $earliestGet earliest unix timestamp the message can be retreived.
-     * @param float $priority priority for order out of get(). 0 is higher priority than 1
+     * @param Message $message The message to enqueue.
      *
      * @return void
      *
      * @throws \InvalidArgumentException $priority is NaN
      */
-    public function send(array $payload, int $earliestGet = 0, float $priority = 0.0);
+    public function send(Message $message);
 }
