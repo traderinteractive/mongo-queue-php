@@ -380,18 +380,18 @@ final class QueueTest extends TestCase
      */
     public function earliestGet()
     {
-         $messageOne = $this->getMessage(
-             ['key1' => 0, 'key2' => true],
-             new UTCDateTime((time() + 1) * 1000)
-         );
+        $messageOne = $this->getMessage(
+            ['key1' => 0, 'key2' => true],
+            new UTCDateTime((time() + 1) * 1000)
+        );
 
-         $this->queue->send($messageOne);
+        $this->queue->send($messageOne);
 
-         $this->assertSame([], $this->queue->get($messageOne->getPayload()));
+        $this->assertSame([], $this->queue->get($messageOne->getPayload()));
 
-         sleep(1);
+        sleep(1);
 
-         $this->assertCount(1, $this->queue->get($messageOne->getPayload()));
+        $this->assertCount(1, $this->queue->get($messageOne->getPayload()));
     }
 
     /**
