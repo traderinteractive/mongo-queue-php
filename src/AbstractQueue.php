@@ -5,6 +5,7 @@
 
 namespace TraderInteractive\Mongo;
 
+use ArrayObject;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
 
@@ -95,8 +96,9 @@ abstract class AbstractQueue
      *                                  retreived again.
      * @param int $waitDurationInMillis millisecond duration to wait for a message.
      * @param int $pollDurationInMillis millisecond duration to wait between polls.
+     * @param int $limit The maximum number of messages to return.
      *
-     * @return array|null the message or null if one is not found
+     * @return array Array of messages.
      *
      * @throws \InvalidArgumentException key in $query was not a string
      */
@@ -104,9 +106,9 @@ abstract class AbstractQueue
         array $query,
         int $runningResetDuration,
         int $waitDurationInMillis = 3000,
-        int $pollDurationInMillis = 200
-    ) {
-
+        int $pollDurationInMillis = 200,
+        int $limit = 1
+    ) : array {
         $completeQuery = $this->buildPayloadQuery(
             ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]],
             $query
@@ -120,16 +122,21 @@ abstract class AbstractQueue
         $end = microtime(true) + ($waitDurationInMillis / 1000.0);
         $sleepTime = $this->calculateSleepTime($pollDurationInMillis);
 
-        do {
-            $message = [];
-            if ($this->tryFindOneAndUpdate($completeQuery, $update, $message)) {
-                return $message;
+        $messages = new ArrayObject();
+
+        while (count($messages) < $limit) {
+            if ($this->tryFindOneAndUpdate($completeQuery, $update, $messages)) {
+                continue;
             }
 
-            usleep($sleepTime);
-        } while (microtime(true) < $end);
+            if (microtime(true) < $end) {
+                usleep($sleepTime);
+            }
 
-        return null;
+            break;
+        }
+
+        return $messages->getArrayCopy();
     }
 
     /**
@@ -333,7 +340,7 @@ abstract class AbstractQueue
         return min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
     }
 
-    private function tryFindOneAndUpdate(array $query, array $update, array &$queueMessage) : bool
+    private function tryFindOneAndUpdate(array $query, array $update, ArrayObject $messages) : bool
     {
         $findOneAndUpdateOptions = ['sort' => ['priority' => 1, 'created' => 1]];
         $findOneOptions = ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']];
@@ -346,7 +353,7 @@ abstract class AbstractQueue
             // findOneAndUpdate does not correctly return result according to typeMap options so just refetch.
             $message = $this->collection->findOne(['_id' => $id], $findOneOptions);
             //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
-            $queueMessage = ['id' => $id] + $message['payload'];
+            $messages[] = ['id' => $id] + $message['payload'];
             return true;
         }
 

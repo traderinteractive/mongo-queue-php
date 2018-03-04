@@ -206,7 +206,7 @@ final class QueueTest extends TestCase
         $this->queue->send(['key1' => 0, 'key2' => true]);
 
         $result = $this->queue->get(['key3' => 0], PHP_INT_MAX, 0);
-        $this->assertNull($result);
+        $this->assertSame([], $result);
 
         $this->assertSame(1, $this->collection->count());
     }
@@ -242,7 +242,7 @@ final class QueueTest extends TestCase
         $this->queue->send($messageOne);
         $this->queue->send(['key' => 'value']);
 
-        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
 
         $this->assertNotSame($messageOne['id'], $result['id']);
 
@@ -270,7 +270,7 @@ final class QueueTest extends TestCase
         $this->queue->send(['key1' => 0, 'key2' => true]);
         $this->queue->send($messageTwo);
 
-        $result = $this->queue->get(['one.two.three' => ['$gt' => 4]], PHP_INT_MAX, 0);
+        $result = $this->queue->get(['one.two.three' => ['$gt' => 4]], PHP_INT_MAX, 0)[0];
         $this->assertSame(['id' => $result['id']] + $messageTwo, $result);
     }
 
@@ -289,7 +289,7 @@ final class QueueTest extends TestCase
 
         //try get message we already have before ack
         $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
-        $this->assertNull($result);
+        $this->assertSame([], $result);
     }
 
     /**
@@ -306,9 +306,9 @@ final class QueueTest extends TestCase
         $this->queue->send($messageTwo, 0, 0.4);
         $this->queue->send($messageThree, 0, 0.3);
 
-        $resultOne = $this->queue->get([], PHP_INT_MAX, 0);
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
-        $resultThree = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $resultThree = $this->queue->get([], PHP_INT_MAX, 0)[0];
 
         $this->assertSame(['id' => $resultOne['id']] + $messageThree, $resultOne);
         $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
@@ -329,9 +329,9 @@ final class QueueTest extends TestCase
         $this->queue->send($messageTwo);
         $this->queue->send($messageThree);
 
-        $resultOne = $this->queue->get([], PHP_INT_MAX, 0);
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
-        $resultThree = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $resultThree = $this->queue->get([], PHP_INT_MAX, 0)[0];
 
         $this->assertSame(['id' => $resultOne['id']] + $messageOne, $resultOne);
         $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
@@ -352,13 +352,13 @@ final class QueueTest extends TestCase
         $this->queue->send($messageTwo);
         $this->queue->send($messageThree);
 
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
         //ensuring using old timestamp shouldn't affect normal time order of send()s
         $this->queue->requeue($resultTwo, 0, 0.0, false);
 
-        $resultOne = $this->queue->get([], PHP_INT_MAX, 0);
-        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0);
-        $resultThree = $this->queue->get([], PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $resultTwo = $this->queue->get([], PHP_INT_MAX, 0)[0];
+        $resultThree = $this->queue->get([], PHP_INT_MAX, 0)[0];
 
         $this->assertSame(['id' => $resultOne['id']] + $messageOne, $resultOne);
         $this->assertSame(['id' => $resultTwo['id']] + $messageTwo, $resultTwo);
@@ -391,11 +391,11 @@ final class QueueTest extends TestCase
 
          $this->queue->send($messageOne, time() + 1);
 
-         $this->assertNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
+         $this->assertSame([], $this->queue->get($messageOne, PHP_INT_MAX, 0));
 
          sleep(1);
 
-         $this->assertNotNull($this->queue->get($messageOne, PHP_INT_MAX, 0));
+         $this->assertCount(1, $this->queue->get($messageOne, PHP_INT_MAX, 0));
     }
 
     /**
@@ -482,7 +482,7 @@ final class QueueTest extends TestCase
         $this->queue->send($messageOne);
         $this->queue->send(['key' => 'value']);
 
-        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $result = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
         $this->assertSame(2, $this->collection->count());
 
         $this->queue->ack($result);
@@ -511,13 +511,13 @@ final class QueueTest extends TestCase
         $this->queue->send($messageOne);
         $this->queue->send(['key' => 'value']);
 
-        $resultOne = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $resultOne = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
         $this->assertSame(2, $this->collection->count());
 
         $this->queue->ackSend($resultOne, $messageThree);
         $this->assertSame(2, $this->collection->count());
 
-        $actual = $this->queue->get(['hi' => 'there'], PHP_INT_MAX, 0);
+        $actual = $this->queue->get(['hi' => 'there'], PHP_INT_MAX, 0)[0];
         $expected = ['id' => $resultOne['id']] + $messageThree;
 
         $actual['id'] = $actual['id']->__toString();
@@ -537,12 +537,11 @@ final class QueueTest extends TestCase
     {
         $message = ['key1' => 0, 'key2' => true];
         $this->queue->send($message);
-        $result = $this->queue->get([], PHP_INT_MAX, 0);
+        $result = $this->queue->get([], PHP_INT_MAX, 0)[0];
         $this->assertSame($message['key1'], $result['key1']);
         $this->assertSame($message['key2'], $result['key2']);
         $this->queue->ackSend($result, ['key1' => 1, 'key2' => 2], strtotime('+ 1 day'));
-        $actual = $this->queue->get([], PHP_INT_MAX, 0);
-        $this->assertNull($actual);
+        $this->assertSame([], $this->queue->get([], PHP_INT_MAX, 0));
     }
 
     /**
@@ -572,7 +571,7 @@ final class QueueTest extends TestCase
     public function ackSendWithHighEarliestGet()
     {
         $this->queue->send([]);
-        $messageToAck = $this->queue->get([], PHP_INT_MAX, 0);
+        $messageToAck = $this->queue->get([], PHP_INT_MAX, 0)[0];
 
         $this->queue->ackSend($messageToAck, [], PHP_INT_MAX);
 
@@ -615,12 +614,12 @@ final class QueueTest extends TestCase
         $this->queue->send($messageOne);
         $this->queue->send(['key' => 'value']);
 
-        $resultBeforeRequeue = $this->queue->get($messageOne, PHP_INT_MAX, 0);
+        $resultBeforeRequeue = $this->queue->get($messageOne, PHP_INT_MAX, 0)[0];
 
         $this->queue->requeue($resultBeforeRequeue);
         $this->assertSame(2, $this->collection->count());
 
-        $resultAfterRequeue = $this->queue->get($messageOne, 0);
+        $resultAfterRequeue = $this->queue->get($messageOne, 0)[0];
         $this->assertSame(['id' => $resultAfterRequeue['id']] + $messageOne, $resultAfterRequeue);
     }
 

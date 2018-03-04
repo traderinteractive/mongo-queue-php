@@ -50,8 +50,9 @@ interface QueueInterface
      *                                  retreived again.
      * @param int $waitDurationInMillis millisecond duration to wait for a message.
      * @param int $pollDurationInMillis millisecond duration to wait between polls.
+     * @param int $limit The maximum number of messages to return.
      *
-     * @return array|null the message or null if one is not found
+     * @return array Array of messages.
      *
      * @throws \InvalidArgumentException key in $query was not a string
      */
@@ -59,8 +60,9 @@ interface QueueInterface
         array $query,
         int $runningResetDuration,
         int $waitDurationInMillis = 3000,
-        int $pollDurationInMillis = 200
-    );
+        int $pollDurationInMillis = 200,
+        int $limit = 1
+    ) : array;
 
     /**
      * Count queue messages.
