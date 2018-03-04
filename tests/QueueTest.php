@@ -385,46 +385,6 @@ final class QueueTest extends TestCase
 
     /**
      * @test
-     * @covers ::get
-     */
-    public function resetStuck()
-    {
-        $messageOne = $this->getMessage(['key' => 0]);
-        $messageTwo = $this->getMessage(['key' => 1]);
-
-        $this->queue->send($messageOne);
-        $this->queue->send($messageTwo);
-
-        //sets to running
-        $this->collection->updateOne(
-            ['payload.key' => 0],
-            ['$set' => ['earliestGet' => new UTCDateTime(time() * 1000)]]
-        );
-        $this->collection->updateOne(
-            ['payload.key' => 1],
-            ['$set' => ['earliestGet' => new UTCDateTime(time() * 1000)]]
-        );
-
-        $this->assertSame(
-            2,
-            $this->collection->count(
-                ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]]
-            )
-        );
-
-        //resets and gets messageOne
-        $this->assertNotNull($this->queue->get($messageOne->getPayload()));
-
-        $this->assertSame(
-            1,
-            $this->collection->count(
-                ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]]
-            )
-        );
-    }
-
-    /**
-     * @test
      * @covers ::count
      * @expectedException \InvalidArgumentException
      */
