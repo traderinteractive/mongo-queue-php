@@ -8,6 +8,7 @@ namespace TraderInteractive\Mongo;
 use ArrayObject;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
+use MongoDB\Operation\FindOneAndUpdate;
 
 /**
  * Abstraction of mongo db collection as priority queue.
@@ -30,6 +31,15 @@ abstract class AbstractQueue
      * @var \MongoDB\Collection
      */
     protected $collection;
+
+    /**
+     * @var array
+     */
+    const FIND_ONE_AND_UPDATE_OPTIONS = [
+        'sort' => ['priority' => 1, 'created' => 1],
+        'typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array'],
+        'returnDocument' => FindOneAndUpdate::RETURN_DOCUMENT_AFTER,
+    ];
 
     /**
      * Ensure an index for the get() method.
@@ -274,35 +284,19 @@ abstract class AbstractQueue
 
     private function tryFindOneAndUpdate(array $query, array $update, ArrayObject $messages) : bool
     {
-        $findOneAndUpdateOptions = ['sort' => ['priority' => 1]];
-        $findOneOptions = ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']];
+        $document = $this->collection->findOneAndUpdate($query, $update, self::FIND_ONE_AND_UPDATE_OPTIONS);
+        if ($document === null) {
+            return false;
+        }
 
-        $id = $this->getIdFromMessage(
-            $this->collection->findOneAndUpdate($query, $update, $findOneAndUpdateOptions)
+        $messages[] = new Message(
+            $document['_id'],
+            $document['payload'],
+            $document['earliestGet'],
+            $document['priority']
         );
 
-        if ($id !== null) {
-            // findOneAndUpdate does not correctly return result according to typeMap options so just refetch.
-            $message = $this->collection->findOne(['_id' => $id], $findOneOptions);
-            //id on left of union operator so a possible id in payload doesnt wipe it out the generated one
-            $messages[] = ['id' => $id] + $message['payload'];
-            return true;
-        }
-
-        return false;
-    }
-
-    private function getIdFromMessage($message)
-    {
-        if (is_array($message)) {
-            return array_key_exists('_id', $message) ? $message['_id'] : null;
-        }
-
-        if (is_object($message)) {
-            return isset($message->_id) ? $message->_id : null;
-        }
-
-        return null;
+        return true;
     }
 
     private function isIndexIncludedInExistingIndex(array $index) : bool
