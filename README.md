@@ -29,9 +29,13 @@ PHP message queue using MongoDB as a backend.
 use TraderInteractive\Mongo\Queue;
 
 $queue = new Queue('mongodb://localhost', 'queues', 'queue');
-$queue->send(array());
-$message = $queue->get(array(), 60);
-$queue->ack($message);
+$queue->send(new Message());
+$messages = $queue->get([], ['runningResetDuration' => 60]);
+foreach ($messages as $message) {
+    // Do something with message
+
+    $queue->ack($message);
+}
 ```
 
 ## Composer
