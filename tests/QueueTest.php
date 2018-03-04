@@ -422,16 +422,14 @@ final class QueueTest extends TestCase
      */
     public function ack()
     {
-        $messageOne = $this->getMessage(['key1' => 0, 'key2' => true]);
-
-        $this->queue->send($messageOne);
-        $this->queue->send($this->getMessage(['key' => 'value']));
-
-        $result = $this->queue->get($messageOne->getPayload())[0];
-        $this->assertSame(2, $this->collection->count());
-
-        $this->queue->ack($result);
-        $this->assertSame(1, $this->collection->count());
+        $messages = [$this->getMessage(), $this->getMessage()];
+        $this->sendAllMessages($messages);
+        $count = $this->collection->count();
+        $this->assertSame(2, $count);
+        foreach ($this->queue->get([], ['maxNumberOfMessages' => 10]) as $message) {
+            $this->queue->ack($message);
+            $this->assertSame(--$count, $this->collection->count());
+        }
     }
 
     /**
@@ -441,18 +439,14 @@ final class QueueTest extends TestCase
     public function requeue()
     {
         $messages = [
-            $this->getMessage(['id' => 1, 'key' => 'value']),
-            $this->getMessage(['id' => 2, 'key' => 'value']),
-            $this->getMessage(['id' => 3, 'key' => 'value']),
+            $this->getMessage(['key' => 1]),
+            $this->getMessage(['key' => 2]),
+            $this->getMessage(['key' => 3]),
         ];
 
-        foreach ($messages as $message) {
-            $this->queue->send($message);
-        }
+        $this->sendAllMessages($messages);
 
-        $query = ['key' => 'value'];
-
-        $message = $this->queue->get($query)[0];
+        $message = $this->queue->get([])[0];
 
         $this->assertSameMessage($messages[0], $message);
 
@@ -522,6 +516,18 @@ final class QueueTest extends TestCase
 
     private function getMessage(array $payload = [], UTCDateTime $earliestGet = null, float $priority = 0.0)
     {
-        return new Message(new ObjectId(), $payload, $earliestGet ?? new UTCDateTime(0), $priority);
+        return new Message(
+            new ObjectId(),
+            $payload,
+            $earliestGet ?? new UTCDateTime((int)microtime() * 1000),
+            $priority
+        );
+    }
+
+    private function sendAllMessages(array $messages)
+    {
+        foreach ($messages as $message) {
+            $this->queue->send($message);
+        }
     }
 }
