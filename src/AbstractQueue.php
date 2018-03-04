@@ -152,23 +152,16 @@ abstract class AbstractQueue
      */
     final public function get(array $query, array $options = []) : array
     {
-        $options += self::DEFAULT_GET_OPTIONS;
-
         $completeQuery = $this->buildPayloadQuery(
             ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]],
             $query
         );
 
-        $resetTimestamp = $this->calculateResetTimestamp($options['runningResetDuration']);
-
-        $update = ['$set' => ['earliestGet' => new UTCDateTime($resetTimestamp)]];
-
-        //ints overflow to floats, should be fine
-        $end = microtime(true) + ($options['waitDurationInMillis'] / 1000.0);
+        $options += self::DEFAULT_GET_OPTIONS;
+        $update = ['$set' => ['earliestGet' => $this->calculateEarliestGet($options['runningResetDuration'])]];
+        $end = $this->calculateEndTime($options['waitDurationInMillis']);
         $sleepTime = $this->calculateSleepTime($options['pollDurationInMillis']);
-
         $messages = new ArrayObject();
-
         while (count($messages) < $options['maxNumberOfMessages']) {
             if ($this->tryFindOneAndUpdate($completeQuery, $update, $messages)) {
                 continue;
@@ -306,11 +299,11 @@ abstract class AbstractQueue
         return is_int($sleepTime) ? $sleepTime : PHP_INT_MAX;
     }
 
-    private function calculateResetTimestamp(int $runningResetDuration) : int
+    private function calculateEarliestGet(int $runningResetDuration) : UTCDateTime
     {
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats, max at PHP_INT_MAX
-        return min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
+        return new UTCDateTime(min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX));
     }
 
     private function tryFindOneAndUpdate(array $query, array $update, ArrayObject $messages) : bool
@@ -411,5 +404,11 @@ abstract class AbstractQueue
             $reflectionClass = new \ReflectionClass($exceptionClass);
             throw $reflectionClass->newInstanceArgs([$message]);
         }
+    }
+
+    private function calculateEndTime(int $waitDurationInMillis) : int
+    {
+        //ints overflow to floats, should be fine
+        return microtime(true) + ($waitDurationInMillis / 1000.0);
     }
 }
