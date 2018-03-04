@@ -159,7 +159,7 @@ abstract class AbstractQueue
             $query
         );
 
-        $resetTimestamp = $this->calcuateResetTimestamp($options['runningResetDuration']);
+        $resetTimestamp = $this->calculateResetTimestamp($options['runningResetDuration']);
 
         $update = ['$set' => ['earliestGet' => new UTCDateTime($resetTimestamp)]];
 
@@ -306,14 +306,10 @@ abstract class AbstractQueue
         return is_int($sleepTime) ? $sleepTime : PHP_INT_MAX;
     }
 
-    private function calcuateResetTimeStamp(int $runningResetDuration) : int
+    private function calculateResetTimestamp(int $runningResetDuration) : int
     {
         $resetTimestamp = time() + $runningResetDuration;
-        //ints overflow to floats
-        if (!is_int($resetTimestamp)) {
-            $resetTimestamp = $runningResetDuration > 0 ? self::MONGO_INT32_MAX : 0;
-        }
-
+        //ints overflow to floats, max at PHP_INT_MAX
         return min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX);
     }
 

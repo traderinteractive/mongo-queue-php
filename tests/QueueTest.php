@@ -225,6 +225,19 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::get
+     *
+     * @return void
+     */
+    public function getWithOverflowResetTimestamp()
+    {
+        $this->queue->send($this->getMessage());
+        $message = $this->queue->get([], ['runningResetDuration' => PHP_INT_MAX])[0];
+        $this->assertEquals(new UTCDateTime(PHP_INT_MAX), $message->getEarliestGet());
+    }
+
+    /**
+     * @test
+     * @covers ::get
      */
     public function getWithNegativePollDuration()
     {
