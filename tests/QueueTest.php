@@ -61,21 +61,10 @@ final class QueueTest extends TestCase
         $indexes = iterator_to_array($collection->listIndexes());
         $this->assertSame(3, count($indexes));
 
-        $expectedOne = [
-            'earliestGet' => 1,
-            'payload.type' => 1,
-            'priority' => 1,
-            'created' => 1,
-            'payload.boo' => -1,
-        ];
+        $expectedOne = ['earliestGet' => 1, 'payload.type' => 1, 'priority' => 1, 'created' => 1, 'payload.boo' => -1];
         $this->assertSame($expectedOne, $indexes[1]['key']);
 
-        $expectedTwo = [
-            'earliestGet' => 1,
-            'payload.another.sub' => 1,
-            'priority' => 1,
-            'created' => 1,
-        ];
+        $expectedTwo = ['earliestGet' => 1, 'payload.another.sub' => 1, 'priority' => 1, 'created' => 1];
         $this->assertSame($expectedTwo, $indexes[2]['key']);
     }
 
