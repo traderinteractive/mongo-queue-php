@@ -46,25 +46,27 @@ interface QueueInterface
      * Get a non running message from the queue.
      *
      * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain
-     *                     operators.  Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
+     *                     operators. Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
      *                     invalid {$and: [{...}, {...}]}
-     * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be
-     *                                  retreived again.
-     * @param int $waitDurationInMillis millisecond duration to wait for a message.
-     * @param int $pollDurationInMillis millisecond duration to wait between polls.
-     * @param int $limit The maximum number of messages to return.
+     * @param array $options Associative array of get options.
+     *                           runningResetDuration => integer
+     *                               The duration (in miiliseconds) that the received messages are hidden from
+     *                               subsequent retrieve requests after being retrieved by a get() request.
+     *                           waitDurationInMillis => integer
+     *                               The duration (in milliseconds) for which the call will wait for a message to
+     *                               arrive in the queue before returning. If a message is available, the call will
+     *                               return sooner than WaitTimeSeconds.
+     *                           pollDurationInMillis => integer
+     *                               The millisecond duration to wait between polls.
+     *                           maxNumberOfMessages => integer
+     *                               The maximum number of messages to return with get(). All of the messages are not
+     *                               necessarily returned.
      *
-     * @return Message[] Array of messages.
+     * @return array Array of messages.
      *
      * @throws \InvalidArgumentException key in $query was not a string
      */
-    public function get(
-        array $query,
-        int $runningResetDuration,
-        int $waitDurationInMillis = 3000,
-        int $pollDurationInMillis = 200,
-        int $limit = 1
-    ) : array;
+    public function get(array $query, array $options = []) : array;
 
     /**
      * Count queue messages.

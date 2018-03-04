@@ -42,6 +42,36 @@ abstract class AbstractQueue
     ];
 
     /**
+     * @var integer
+     */
+    const DEFAULT_MAX_NUMBER_OF_MESSAGES = 1;
+
+    /**
+     * @var integer
+     */
+    const DEFAULT_RUNNING_RESET_DURATION = 600000;
+
+    /**
+     * @var integer
+     */
+    const DEFAULT_WAIT_DURATION_IN_MILLISECONDS = 3000;
+
+    /**
+     * @var integer
+     */
+    const DEFAULT_POLL_DURATION_IN_MILLISECONDS = 200;
+
+    /**
+     * @var array
+     */
+    const DEFAULT_GET_OPTIONS = [
+       'maxNumberOfMessages' => self::DEFAULT_MAX_NUMBER_OF_MESSAGES,
+       'runningResetDuration' => self::DEFAULT_RUNNING_RESET_DURATION,
+       'waitDurationInMillis' => self::DEFAULT_WAIT_DURATION_IN_MILLISECONDS,
+       'pollDurationInMillis' => self::DEFAULT_POLL_DURATION_IN_MILLISECONDS,
+    ];
+
+    /**
      * Ensure an index for the get() method.
      *
      * @param array $beforeSort Fields in get() call to index before the sort field in same format
@@ -102,39 +132,44 @@ abstract class AbstractQueue
      * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain
      *                     operators. Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
      *                     invalid {$and: [{...}, {...}]}
-     * @param int $runningResetDuration second duration the message can stay unacked before it resets and can be
-     *                                  retreived again.
-     * @param int $waitDurationInMillis millisecond duration to wait for a message.
-     * @param int $pollDurationInMillis millisecond duration to wait between polls.
-     * @param int $limit The maximum number of messages to return.
+     * @param array $options Associative array of get options.
+     *                           runningResetDuration => integer
+     *                               The duration (in miiliseconds) that the received messages are hidden from
+     *                               subsequent retrieve requests after being retrieved by a get() request.
+     *                           waitDurationInMillis => integer
+     *                               The duration (in milliseconds) for which the call will wait for a message to
+     *                               arrive in the queue before returning. If a message is available, the call will
+     *                               return sooner than WaitTimeSeconds.
+     *                           pollDurationInMillis => integer
+     *                               The millisecond duration to wait between polls.
+     *                           maxNumberOfMessages => integer
+     *                               The maximum number of messages to return with get(). All of the messages are not
+     *                               necessarily returned.
      *
      * @return array Array of messages.
      *
      * @throws \InvalidArgumentException key in $query was not a string
      */
-    final public function get(
-        array $query,
-        int $runningResetDuration,
-        int $waitDurationInMillis = 3000,
-        int $pollDurationInMillis = 200,
-        int $limit = 1
-    ) : array {
+    final public function get(array $query, array $options = []) : array
+    {
+        $options += self::DEFAULT_GET_OPTIONS;
+
         $completeQuery = $this->buildPayloadQuery(
             ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]],
             $query
         );
 
-        $resetTimestamp = $this->calcuateResetTimestamp($runningResetDuration);
+        $resetTimestamp = $this->calcuateResetTimestamp($options['runningResetDuration']);
 
         $update = ['$set' => ['earliestGet' => new UTCDateTime($resetTimestamp)]];
 
         //ints overflow to floats, should be fine
-        $end = microtime(true) + ($waitDurationInMillis / 1000.0);
-        $sleepTime = $this->calculateSleepTime($pollDurationInMillis);
+        $end = microtime(true) + ($options['waitDurationInMillis'] / 1000.0);
+        $sleepTime = $this->calculateSleepTime($options['pollDurationInMillis']);
 
         $messages = new ArrayObject();
 
-        while (count($messages) < $limit) {
+        while (count($messages) < $options['maxNumberOfMessages']) {
             if ($this->tryFindOneAndUpdate($completeQuery, $update, $messages)) {
                 continue;
             }
