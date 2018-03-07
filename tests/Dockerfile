@@ -13,4 +13,5 @@ USER build
 ADD provisioning/set-env.sh /home/build/set-env.sh
 
 ENTRYPOINT ["/home/build/set-env.sh"]
-CMD ["./build.php"]
+CMD ["./vendor/bin/phpunit"]
+CMD ["./vendor/bin/phpcs"]

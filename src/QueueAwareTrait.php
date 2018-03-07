@@ -1,6 +1,6 @@
 <?php
 
-namespace DominionEnterprises\Mongo;
+namespace TraderInteractive\Mongo;
 
 /**
  * Trait for QueueAwareInterface implementation.
@@ -19,7 +19,7 @@ trait QueueAwareTrait
      *
      * @return QueueInterface
      */
-    public function getQueue()
+    public function getQueue() : QueueInterface
     {
         return $this->mongoQueue;
     }

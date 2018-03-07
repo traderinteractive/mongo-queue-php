@@ -1,21 +1,23 @@
 <?php
-namespace DominionEnterprisesTest\Mongo;
+namespace TraderInteractiveTest\Mongo;
 
-class QueueAwareTraitTest extends \PHPUnit_Framework_TestCase
+use PHPUnit\Framework\TestCase;
+
+class QueueAwareTraitTest extends TestCase
 {
     /**
      * Verify basic behavior of setQueue().
      *
      * @test
-     * @covers \DominionEnterprises\Mongo\QueueAwareTrait
+     * @covers \TraderInteractive\Mongo\QueueAwareTrait
      *
      * @return void
      */
     public function setQueue()
     {
-        $mockQueue = $this->getObjectForTrait('\DominionEnterprises\Mongo\QueueAwareTrait');
+        $mockQueue = $this->getObjectForTrait('\TraderInteractive\Mongo\QueueAwareTrait');
         $this->assertAttributeEquals(null, 'mongoQueue', $mockQueue);
-        $mongoQueue = $this->getMockBuilder('\\DominionEnterprises\\Mongo\\QueueInterface')->getMock();
+        $mongoQueue = $this->getMockBuilder('\\TraderInteractive\\Mongo\\QueueInterface')->getMock();
         $mockQueue->setQueue($mongoQueue);
         $this->assertAttributeEquals($mongoQueue, 'mongoQueue', $mockQueue);
     }
@@ -24,15 +26,14 @@ class QueueAwareTraitTest extends \PHPUnit_Framework_TestCase
      * Verify basic behavior of getQueue().
      *
      * @test
-     * @covers \DominionEnterprises\Mongo\QueueAwareTrait
+     * @covers \TraderInteractive\Mongo\QueueAwareTrait
      *
      * @return void
      */
     public function getQueue()
     {
-        $mockQueue = $this->getObjectForTrait('\DominionEnterprises\Mongo\QueueAwareTrait');
-        $this->assertNull($mockQueue->getQueue());
-        $mongoQueue = $this->getMockBuilder('\\DominionEnterprises\\Mongo\\QueueInterface')->getMock();
+        $mockQueue = $this->getObjectForTrait('\TraderInteractive\Mongo\QueueAwareTrait');
+        $mongoQueue = $this->getMockBuilder('\\TraderInteractive\\Mongo\\QueueInterface')->getMock();
         $mockQueue->setQueue($mongoQueue);
         $this->assertEquals($mongoQueue, $mockQueue->getQueue());
     }

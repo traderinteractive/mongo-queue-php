@@ -1,6 +1,6 @@
 <?php
 
-namespace DominionEnterprises\Mongo;
+namespace TraderInteractive\Mongo;
 
 /**
  * Interface for QueueInterface dependency injection.
@@ -12,7 +12,7 @@ interface QueueAwareInterface
      *
      * @return QueueInterface
      */
-    public function getQueue();
+    public function getQueue() : QueueInterface;
 
     /**
      * Sets the QueueInterface instance.
