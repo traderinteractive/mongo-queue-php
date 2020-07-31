@@ -16,4 +16,4 @@ before_script:
   - yes '' | pecl install -f mongodb
   - composer update $PREFER_LOWEST
 script: ./vendor/bin/phpunit --coverage-clover clover.xml
-after_success: ./vendor/bin/coveralls -v
+after_success: ./vendor/bin/php-coveralls -v
