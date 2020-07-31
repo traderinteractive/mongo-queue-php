@@ -511,6 +511,7 @@ final class QueueTest extends TestCase
         $this->assertSame((string)$expected->getId(), (string)$actual['_id']);
         $this->assertSame($expected->getPayload(), $actual['payload']);
         $this->assertSame($expected->getPriority(), $actual['priority']);
+        $this->assertSame(gethostname(), $actual['machineName']);
         $this->assertEquals($expected->getEarliestGet(), $actual['earliestGet']);
     }
 
