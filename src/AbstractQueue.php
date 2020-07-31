@@ -226,6 +226,7 @@ abstract class AbstractQueue
             'payload' => $message->getPayload(),
             'earliestGet' => $message->getEarliestGet(),
             'priority' => $message->getPriority(),
+            'machineName' => gethostname(),
             'created' => new UTCDateTime(),
         ];
 
@@ -246,6 +247,7 @@ abstract class AbstractQueue
             'payload' => $message->getPayload(),
             'earliestGet' => $message->getEarliestGet(),
             'priority' => $message->getPriority(),
+            'machineName' => gethostname(),
             'created' => new UTCDateTime(),
         ];
 
