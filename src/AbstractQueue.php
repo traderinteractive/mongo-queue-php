@@ -5,8 +5,12 @@
 
 namespace TraderInteractive\Mongo;
 
+use Exception;
 use ArrayObject;
-use MongoDB\BSON\ObjectID;
+use ReflectionClass;
+use ReflectionException;
+use InvalidArgumentException;
+use MongoDB\Collection;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\Operation\FindOneAndUpdate;
 
@@ -23,19 +27,17 @@ abstract class AbstractQueue
      *
      * @var integer
      */
-    const MONGO_INT32_MAX = PHP_INT_MAX;
+    final const MONGO_INT32_MAX = PHP_INT_MAX;
 
     /**
      * mongo collection to use for queue.
-     *
-     * @var \MongoDB\Collection
      */
-    protected $collection;
+    protected Collection $collection;
 
     /**
      * @var array
      */
-    const FIND_ONE_AND_UPDATE_OPTIONS = [
+    final const FIND_ONE_AND_UPDATE_OPTIONS = [
         'sort' => ['priority' => 1, 'created' => 1],
         'typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array'],
         'returnDocument' => FindOneAndUpdate::RETURN_DOCUMENT_AFTER,
@@ -44,27 +46,27 @@ abstract class AbstractQueue
     /**
      * @var integer
      */
-    const DEFAULT_MAX_NUMBER_OF_MESSAGES = 1;
+    final const DEFAULT_MAX_NUMBER_OF_MESSAGES = 1;
 
     /**
      * @var integer
      */
-    const DEFAULT_RUNNING_RESET_DURATION = 600000;
+    final const DEFAULT_RUNNING_RESET_DURATION = 600000;
 
     /**
      * @var integer
      */
-    const DEFAULT_WAIT_DURATION_IN_MILLISECONDS = 3000;
+    final const DEFAULT_WAIT_DURATION_IN_MILLISECONDS = 3000;
 
     /**
      * @var integer
      */
-    const DEFAULT_POLL_DURATION_IN_MILLISECONDS = 200;
+    final const DEFAULT_POLL_DURATION_IN_MILLISECONDS = 200;
 
     /**
      * @var array
      */
-    const DEFAULT_GET_OPTIONS = [
+    final const DEFAULT_GET_OPTIONS = [
        'maxNumberOfMessages' => self::DEFAULT_MAX_NUMBER_OF_MESSAGES,
        'runningResetDuration' => self::DEFAULT_RUNNING_RESET_DURATION,
        'waitDurationInMillis' => self::DEFAULT_WAIT_DURATION_IN_MILLISECONDS,
@@ -76,15 +78,17 @@ abstract class AbstractQueue
      *
      * @param array $beforeSort Fields in get() call to index before the sort field in same format
      *                          as \MongoDB\Collection::ensureIndex()
-     * @param array $afterSort  Fields in get() call to index after the sort field in same format as
+     * @param array $afterSort Fields in get() call to index after the sort field in same format as
      *                          \MongoDB\Collection::ensureIndex()
      *
      * @return void
      *
-     * @throws \InvalidArgumentException value of $beforeSort or $afterSort is not 1 or -1 for ascending and descending
-     * @throws \InvalidArgumentException key in $beforeSort or $afterSort was not a string
+     * @throws InvalidArgumentException value of $beforeSort or $afterSort is not 1 or -1 for ascending and descending
+     * @throws InvalidArgumentException key in $beforeSort or $afterSort was not a string
+     * @throws ReflectionException
+     * @throws Exception
      */
-    final public function ensureGetIndex(array $beforeSort = [], array $afterSort = [])
+    final public function ensureGetIndex(array $beforeSort = [], array $afterSort = []): void
     {
         //using general rule: equality, sort, range or more equality tests in that order for index
         $completeFields = ['earliestGet' => 1];
@@ -110,10 +114,11 @@ abstract class AbstractQueue
      *
      * @return void
      *
-     * @throws \InvalidArgumentException key in $fields was not a string
-     * @throws \InvalidArgumentException value of $fields is not 1 or -1 for ascending and descending
+     * @throws InvalidArgumentException key in $fields was not a string
+     * @throws InvalidArgumentException value of $fields is not 1 or -1 for ascending and descending
+     * @throws Exception
      */
-    final public function ensureCountIndex(array $fields, bool $includeRunning)
+    final public function ensureCountIndex(array $fields, bool $includeRunning): void
     {
         $completeFields = [];
 
@@ -127,14 +132,14 @@ abstract class AbstractQueue
     }
 
     /**
-     * Get a non running message from the queue.
+     * Get a non-running message from the queue.
      *
      * @param array $query in same format as \MongoDB\Collection::find() where top level fields do not contain
      *                     operators. Lower level fields can however. eg: valid {a: {$gt: 1}, "b.c": 3},
      *                     invalid {$and: [{...}, {...}]}
      * @param array $options Associative array of get options.
      *                           runningResetDuration => integer
-     *                               The duration (in miiliseconds) that the received messages are hidden from
+     *                               The duration (in milliseconds) that the received messages are hidden from
      *                               subsequent retrieve requests after being retrieved by a get() request.
      *                           waitDurationInMillis => integer
      *                               The duration (in milliseconds) for which the call will wait for a message to
@@ -143,14 +148,14 @@ abstract class AbstractQueue
      *                           pollDurationInMillis => integer
      *                               The millisecond duration to wait between polls.
      *                           maxNumberOfMessages => integer
-     *                               The maximum number of messages to return with get(). All of the messages are not
+     *                               The maximum number of messages to return with get(). All the messages are not
      *                               necessarily returned.
      *
-     * @return array Array of messages.
+     * @return Message[] Array of messages.
      *
-     * @throws \InvalidArgumentException key in $query was not a string
+     * @throws InvalidArgumentException key in $query was not a string
      */
-    final public function get(array $query, array $options = []) : array
+    final public function get(array $query, array $options = []): array
     {
         $completeQuery = $this->buildPayloadQuery(
             ['earliestGet' => ['$lte' => new UTCDateTime((int)(microtime(true) * 1000))]],
@@ -187,7 +192,7 @@ abstract class AbstractQueue
      *
      * @return int the count
      *
-     * @throws \InvalidArgumentException key in $query was not a string
+     * @throws InvalidArgumentException key in $query was not a string
      */
     final public function count(array $query, bool $running = null) : int
     {
@@ -198,7 +203,7 @@ abstract class AbstractQueue
             $totalQuery['earliestGet'] = [$key => new UTCDateTime((int)(microtime(true) * 1000))];
         }
 
-        return $this->collection->count($this->buildPayloadQuery($totalQuery, $query));
+        return $this->collection->countDocuments($this->buildPayloadQuery($totalQuery, $query));
     }
 
     /**
@@ -208,7 +213,7 @@ abstract class AbstractQueue
      *
      * @return void
      */
-    final public function ack(Message $message)
+    final public function ack(Message $message): void
     {
         $this->collection->deleteOne(['_id' => $message->getId()]);
     }
@@ -220,7 +225,7 @@ abstract class AbstractQueue
      *
      * @return void
      */
-    final public function requeue(Message $message)
+    final public function requeue(Message $message): void
     {
         $set = [
             'payload' => $message->getPayload(),
@@ -240,7 +245,7 @@ abstract class AbstractQueue
      *
      * @return void
      */
-    final public function send(Message $message)
+    final public function send(Message $message): void
     {
         $document = [
             '_id' => $message->getId(),
@@ -262,9 +267,9 @@ abstract class AbstractQueue
      *
      * @return void
      *
-     * @throws \Exception couldnt create index after 5 attempts
+     * @throws Exception Could not create index after 5 attempts
      */
-    final private function ensureIndex(array $index)
+    private function ensureIndex(array $index): void
     {
         if ($this->isIndexIncludedInExistingIndex($index)) {
             return;
@@ -276,18 +281,18 @@ abstract class AbstractQueue
             }
         }
 
-        throw new \Exception('couldnt create index after 5 attempts');
+        throw new Exception('Could not create index after 5 attempts');
         //@codeCoverageIgnoreEnd
     }
 
-    private function buildPayloadQuery(array $initialQuery, array $payloadQuery)
+    private function buildPayloadQuery(array $initialQuery, array $payloadQuery): array
     {
         foreach ($payloadQuery as $key => $value) {
             if (!is_string($key)) {
-                throw new \InvalidArgumentException('key in $query was not a string');
+                throw new InvalidArgumentException('key in $query was not a string');
             }
 
-            $initialQuery["payload.{$key}"] = $value;
+            $initialQuery["payload.$key"] = $value;
         }
 
         return $initialQuery;
@@ -319,7 +324,7 @@ abstract class AbstractQueue
             $document['_id'],
             $document['payload'],
             $document['earliestGet'],
-            $document['priority']
+            $document['priority'],
         );
 
         return true;
@@ -357,7 +362,7 @@ abstract class AbstractQueue
         //and just go with that name.
         try {
             $this->collection->createIndex($index, ['name' => $name, 'background' => true]);
-        } catch (\MongoDB\Exception\Exception $e) {
+        } catch (\MongoDB\Exception\Exception) {
             //this happens when the name was too long, let continue
         }
 
@@ -378,32 +383,34 @@ abstract class AbstractQueue
     /**
      * Helper method to validate keys and values for the given sort array
      *
-     * @param array  $sort             The proposed sort for a mongo index.
-     * @param string $label            The name of the variable given to the public ensureXIndex method.
-     * @param array  &$completedFields The final index array with payload. prefix added to fields.
-     *
+     * @param array $sort The proposed sort for a mongo index.
+     * @param string $label The name of the variable given to the public ensureXIndex method.
+     * @param array $completeFields
      * @return void
+     * @throws ReflectionException
      */
-    final private function verifySort(array $sort, string $label, array &$completeFields)
+    private function verifySort(array $sort, string $label, array &$completeFields): void
     {
         foreach ($sort as $key => $value) {
             $this->throwIfTrue(!is_string($key), "key in \${$label} was not a string");
             $this->throwIfTrue(
                 $value !== 1 && $value !== -1,
-                "value of \${$label} is not 1 or -1 for ascending and descending"
+                "value of \${$label} is not 1 or -1 for ascending and descending",
             );
 
             $completeFields["payload.{$key}"] = $value;
         }
     }
 
+    /**
+     * @throws ReflectionException
+     */
     private function throwIfTrue(
         bool $condition,
-        string $message,
-        string $exceptionClass = '\\InvalidArgumentException'
-    ) {
+        string $message
+    ): void {
         if ($condition === true) {
-            $reflectionClass = new \ReflectionClass($exceptionClass);
+            $reflectionClass = new ReflectionClass(InvalidArgumentException::class);
             throw $reflectionClass->newInstanceArgs([$message]);
         }
     }

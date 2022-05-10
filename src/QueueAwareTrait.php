@@ -12,12 +12,10 @@ trait QueueAwareTrait
      *
      * @var QueueInterface
      */
-    private $mongoQueue;
+    private QueueInterface $mongoQueue;
 
     /**
      * Returns the Queue instance.
-     *
-     * @return QueueInterface
      */
     public function getQueue() : QueueInterface
     {
@@ -28,12 +26,12 @@ trait QueueAwareTrait
      * Sets the Queue instance.
      *
      * @param QueueInterface $mongoQueue
-     *
-     * @return QueueAwareInterface
+     * @return QueueAwareTrait
      */
-    public function setQueue(QueueInterface $mongoQueue)
+    public function setQueue(QueueInterface $mongoQueue): static
     {
         $this->mongoQueue = $mongoQueue;
+
         return $this;
     }
 }

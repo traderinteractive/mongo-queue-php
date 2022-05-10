@@ -24,14 +24,14 @@
         "sort-packages": true
     },
     "require": {
-        "php": "^7.0",
+        "php": "^8.1.5",
         "ext-mongodb": "*",
-        "mongodb/mongodb": "^1.1"
+        "mongodb/mongodb": "^1.12.0"
     },
     "require-dev": {
-        "php-coveralls/php-coveralls": "^2.2",
-        "phpunit/phpunit": "^6.5.2",
-        "squizlabs/php_codesniffer": "^3.2"
+        "php-coveralls/php-coveralls": "^v2.5.2",
+        "phpunit/phpunit": "^9.5.20",
+        "squizlabs/php_codesniffer": "^3.6.2"
     },
     "autoload": {
         "psr-4": { "TraderInteractive\\Mongo\\": "src/" }

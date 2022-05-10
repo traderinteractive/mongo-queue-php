@@ -2,10 +2,14 @@
 
 namespace TraderInteractive\Mongo;
 
+use Exception;
+use InvalidArgumentException;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\Client;
+use MongoDB\Collection;
 use PHPUnit\Framework\TestCase;
+use ReflectionException;
 
 /**
  * @coversDefaultClass \TraderInteractive\Mongo\Queue
@@ -14,11 +18,11 @@ use PHPUnit\Framework\TestCase;
  */
 final class QueueTest extends TestCase
 {
-    private $collection;
+    private Collection $collection;
     private $mongoUrl;
-    private $queue;
+    private Queue $queue;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
         $mongo = new Client(
@@ -26,13 +30,15 @@ final class QueueTest extends TestCase
             [],
             ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
         );
-        $this->collection = $mongo->selectDatabase('testing')->selectCollection('messages');
+        $this->collection = $mongo
+            ->selectDatabase('testing')
+            ->selectCollection('messages');
         $this->collection->deleteMany([]);
 
         $this->queue = new Queue($this->collection);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         (new Client($this->mongoUrl))->dropDatabase('testing');
     }
@@ -40,20 +46,24 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::__construct
-     * @expectedException \InvalidArgumentException
      */
     public function constructWithNonStringUrl()
     {
+        $this->expectException(InvalidArgumentException::class);
         new Queue(1, 'testing', 'messages');
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
+     * @throws ReflectionException
      */
     public function ensureGetIndex()
     {
-        $collection = (new Client($this->mongoUrl))->selectDatabase('testing')->selectCollection(uniqid());
+        $collection = (new Client($this->mongoUrl))
+            ->selectDatabase('testing')
+            ->selectCollection(uniqid());
+
         $queue = new Queue($collection);
         $queue->ensureGetIndex(['type' => 1], ['boo' => -1]);
         $queue->ensureGetIndex(['another.sub' => 1]);
@@ -71,54 +81,44 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \Exception
-     */
-    public function ensureGetIndexWithTooLongCollectionName()
-    {
-        $collectionName = 'messages012345678901234567890123456789012345678901234567890123456789';
-        $collectionName .= '012345678901234567890123456789012345678901234567890123456789';//128 chars
-
-        $queue = new Queue($this->mongoUrl, 'testing', $collectionName);
-        $queue->ensureGetIndex([]);
-    }
-
-    /**
-     * @test
-     * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
+     * @throws ReflectionException
      */
     public function ensureGetIndexWithNonStringBeforeSortKey()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->ensureGetIndex([0 => 1]);
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
+     * @throws ReflectionException
      */
     public function ensureGetIndexWithNonStringAfterSortKey()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->ensureGetIndex(['field' => 1], [0 => 1]);
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
+     * @throws ReflectionException
      */
     public function ensureGetIndexWithBadBeforeSortValue()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->ensureGetIndex(['field' => 'NotAnInt']);
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
+     * @throws ReflectionException
      */
     public function ensureGetIndexWithBadAfterSortValue()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->ensureGetIndex([], ['field' => 'NotAnInt']);
     }
 
@@ -127,12 +127,15 @@ final class QueueTest extends TestCase
      *
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \Exception
-     * @expectedExceptionMessage couldnt create index after 5 attempts
      */
     public function ensureIndexCannotBeCreatedAfterFiveAttempts()
     {
-        $mockCollection = $this->getMockBuilder('\MongoDB\Collection')->disableOriginalConstructor()->getMock();
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Could not create index after 5 attempts');
+        $mockCollection = $this
+            ->getMockBuilder(Collection::class)
+            ->disableOriginalConstructor()
+            ->getMock();
 
         $mockCollection->method('listIndexes')->willReturn([]);
 
@@ -143,10 +146,13 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureCountIndex
+     * @throws Exception
      */
     public function ensureCountIndex()
     {
-        $collection = (new Client($this->mongoUrl))->selectDatabase('testing')->selectCollection(uniqid());
+        $collection = (new Client($this->mongoUrl))
+            ->selectDatabase('testing')
+            ->selectCollection(uniqid());
         $queue = new Queue($collection);
         $queue->ensureCountIndex(['type' => 1, 'boo' => -1], false);
         $queue->ensureCountIndex(['another.sub' => 1], true);
@@ -164,6 +170,7 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureCountIndex
+     * @throws Exception
      */
     public function ensureCountIndexWithPrefixOfPrevious()
     {
@@ -180,20 +187,22 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureCountIndex
-     * @expectedException \InvalidArgumentException
+     * @throws Exception
      */
     public function ensureCountIndexWithNonStringKey()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->ensureCountIndex([0 => 1], false);
     }
 
     /**
      * @test
      * @covers ::ensureCountIndex
-     * @expectedException \InvalidArgumentException
+     * @throws Exception
      */
     public function ensureCountIndexWithBadValue()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->ensureCountIndex(['field' => 'NotAnInt'], false);
     }
 
@@ -208,14 +217,12 @@ final class QueueTest extends TestCase
         $result = $this->queue->get(['key3' => 0]);
         $this->assertSame([], $result);
 
-        $this->assertSame(1, $this->collection->count());
+        $this->assertSame(1, $this->collection->countDocuments());
     }
 
     /**
      * @test
      * @covers ::get
-     *
-     * @return void
      */
     public function getWithOverflowResetTimestamp()
     {
@@ -237,10 +244,10 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::get
-     * @expectedException \InvalidArgumentException
      */
     public function getWithNonStringKey()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->get([0 => 'a value']);
     }
 
@@ -386,10 +393,11 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::count
-     * @expectedException \InvalidArgumentException
+     *
      */
     public function countWithNonStringKey()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->queue->count([0 => 'a value']);
     }
 
@@ -424,11 +432,12 @@ final class QueueTest extends TestCase
     {
         $messages = [$this->getMessage(), $this->getMessage()];
         $this->sendAllMessages($messages);
-        $count = $this->collection->count();
+        $count = $this->collection->countDocuments();
         $this->assertSame(2, $count);
+
         foreach ($this->queue->get([], ['maxNumberOfMessages' => 10]) as $message) {
             $this->queue->ack($message);
-            $this->assertSame(--$count, $this->collection->count());
+            $this->assertSame(--$count, $this->collection->countDocuments());
         }
     }
 
@@ -501,11 +510,11 @@ final class QueueTest extends TestCase
 
     private function assertSingleMessage(Message $expected)
     {
-        $this->assertSame(1, $this->collection->count());
+        $this->assertSame(1, $this->collection->countDocuments());
 
         $actual = $this->collection->findOne(
             [],
-            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]
+            ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']],
         );
 
         $this->assertSame((string)$expected->getId(), (string)$actual['_id']);
@@ -515,13 +524,13 @@ final class QueueTest extends TestCase
         $this->assertEquals($expected->getEarliestGet(), $actual['earliestGet']);
     }
 
-    private function getMessage(array $payload = [], UTCDateTime $earliestGet = null, float $priority = 0.0)
+    private function getMessage(array $payload = [], UTCDateTime $earliestGet = null, float $priority = 0.0): Message
     {
         return new Message(
             new ObjectId(),
             $payload,
             $earliestGet ?? new UTCDateTime((int)microtime() * 1000),
-            $priority
+            $priority,
         );
     }
 

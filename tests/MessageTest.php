@@ -110,26 +110,30 @@ class MessageTest extends TestCase
     /**
      * @test
      * @covers ::__construct
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage $priority was NaN
+     *
+     *
      *
      * @return void
      */
     public function constructWithNaNPriority()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('$priority was NaN');
         new Message(null, [], null, NAN);
     }
 
     /**
      * @test
      * @covers ::withPriority
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage $priority was NaN
+     *
+     *
      *
      * @return void
      */
     public function withNaNPriority()
     {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('$priority was NaN');
         (new Message())->withPriority(NAN);
     }
 }

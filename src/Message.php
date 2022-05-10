@@ -7,25 +7,11 @@ use MongoDB\BSON\UTCDateTime;
 
 final class Message
 {
-    /**
-     * @var ObjectId
-     */
-    private $id;
+    private readonly \MongoDB\BSON\ObjectId $id;
 
-    /**
-     * @var array
-     */
-    private $payload;
+    private \MongoDB\BSON\UTCDateTime $earliestGet;
 
-    /**
-     * @var UTCDateTime
-     */
-    private $earliestGet;
-
-    /**
-     * @var float
-     */
-    private $priority;
+    private float $priority;
 
     /**
      * Construct a new Message instance.
@@ -37,20 +23,17 @@ final class Message
      */
     public function __construct(
         ObjectId $id = null,
-        array $payload = [],
+        private array $payload = [],
         UTCDateTime $earliestGet = null,
         float $priority = 0.0
     ) {
         $this->id = $id ?? new ObjectId();
-        $this->payload = $payload;
         $this->earliestGet = $earliestGet ?? new UTCDateTime();
         $this->priority = $this->validatePriority($priority);
     }
 
     /**
      * Gets the unique id of the message.
-     *
-     * @return ObjectId
      */
     public function getId() : ObjectId
     {
@@ -59,8 +42,6 @@ final class Message
 
     /**
      * Gets the data to store in the message.
-     *
-     * @return array
      */
     public function getPayload() : array
     {
@@ -69,8 +50,6 @@ final class Message
 
     /**
      * Gets the earliest unix timestamp time which the message can be retreived.
-     *
-     * @return UTCDateTime
      */
     public function getEarliestGet() : UTCDateTime
     {
@@ -79,8 +58,6 @@ final class Message
 
     /**
      * Gets the priority for order out of get(). 0 is higher priority than 1.
-     *
-     * @return float
      */
     public function getPriority() : float
     {
@@ -91,8 +68,6 @@ final class Message
      * Create a clone of this message with the data to store in the message.
      *
      * @param array $payload The data to store in the message.
-     *
-     * @return Message
      */
     public function withPayload(array $payload) : Message
     {
@@ -105,8 +80,6 @@ final class Message
      * Create a clone of this message with the earliest unix timestamp time which the message can be retreived.
      *
      * @param UTCDateTIme $earliestGet The earliest unix timestamp time which the message can be retreived.
-     *
-     * @return Message
      */
     public function withEarliestGet(UTCDateTime $earliestGet) : Message
     {
@@ -119,8 +92,6 @@ final class Message
      * Create a clone of this message with the priority for order out of get(). 0 is higher priority than 1.
      *
      * @param float $priority The priority for order out of get(). 0 is higher priority than 1.
-     *
-     * @return Message
      */
     public function withPriority(float $priority) : Message
     {

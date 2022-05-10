@@ -9,8 +9,6 @@ interface QueueAwareInterface
 {
     /**
      * Returns the QueueInterface instance.
-     *
-     * @return QueueInterface
      */
     public function getQueue() : QueueInterface;
 
@@ -18,8 +16,7 @@ interface QueueAwareInterface
      * Sets the QueueInterface instance.
      *
      * @param QueueInterface $queue
-     *
      * @return QueueAwareInterface
      */
-    public function setQueue(QueueInterface $queue);
+    public function setQueue(QueueInterface $queue): QueueAwareInterface;
 }

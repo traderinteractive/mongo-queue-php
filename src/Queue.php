@@ -5,8 +5,8 @@
 
 namespace TraderInteractive\Mongo;
 
-use MongoDB\BSON\UTCDateTime;
 use MongoDB\Client;
+use MongoDB\Collection;
 
 /**
  * Abstraction of mongo db collection as priority queue.
@@ -19,23 +19,20 @@ final class Queue extends AbstractQueue implements QueueInterface
     /**
      * Construct queue.
      *
-     * @param \MongoDB\Collection|string $collectionOrUrl A MongoCollection instance or the mongo connection url.
-     * @param string $db the mongo db name
-     * @param string $collection the collection name to use for the queue
-     *
-     * @throws \InvalidArgumentException $collectionOrUrl, $db or $collection was not a string
+     * @param Collection|string $collectionOrUrl A `Collection` instance or the mongo connection URL.
+     * @param string|null $db The mongo db name.
+     * @param string|null $collection The collection name to use for the queue.
      */
-    public function __construct($collectionOrUrl, string $db = null, string $collection = null)
+    public function __construct(Collection|string $collectionOrUrl, string $db = null, string $collection = null)
     {
-        if ($collectionOrUrl instanceof \MongoDB\Collection) {
+        if ($collectionOrUrl instanceof Collection) {
             $this->collection = $collectionOrUrl;
+
             return;
         }
 
-        if (!is_string($collectionOrUrl)) {
-            throw new \InvalidArgumentException('$collectionOrUrl was not a string');
-        }
-
-        $this->collection = (new Client($collectionOrUrl))->selectDatabase($db)->selectCollection($collection);
+        $this->collection = (new Client($collectionOrUrl))
+            ->selectDatabase($db)
+            ->selectCollection($collection);
     }
 }
