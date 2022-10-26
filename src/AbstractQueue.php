@@ -198,7 +198,7 @@ abstract class AbstractQueue
             $totalQuery['earliestGet'] = [$key => new UTCDateTime((int)(microtime(true) * 1000))];
         }
 
-        return $this->collection->count($this->buildPayloadQuery($totalQuery, $query));
+        return $this->collection->countDocuments($this->buildPayloadQuery($totalQuery, $query));
     }
 
     /**
