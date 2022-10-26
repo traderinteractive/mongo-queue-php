@@ -18,7 +18,7 @@ final class QueueTest extends TestCase
     private $mongoUrl;
     private $queue;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->mongoUrl = getenv('TESTING_MONGO_URL') ?: 'mongodb://localhost:27017';
         $mongo = new Client(
@@ -32,7 +32,7 @@ final class QueueTest extends TestCase
         $this->queue = new Queue($this->collection);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         (new Client($this->mongoUrl))->dropDatabase('testing');
     }
@@ -40,10 +40,10 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::__construct
-     * @expectedException \InvalidArgumentException
      */
     public function constructWithNonStringUrl()
     {
+        $this->expectException(\InvalidArgumentException::class);
         new Queue(1, 'testing', 'messages');
     }
 
@@ -71,10 +71,10 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \Exception
      */
     public function ensureGetIndexWithTooLongCollectionName()
     {
+        $this->expectException(\Exception::class);
         $collectionName = 'messages012345678901234567890123456789012345678901234567890123456789';
         $collectionName .= '012345678901234567890123456789012345678901234567890123456789';//128 chars
 
@@ -85,40 +85,40 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithNonStringBeforeSortKey()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->ensureGetIndex([0 => 1]);
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithNonStringAfterSortKey()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->ensureGetIndex(['field' => 1], [0 => 1]);
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithBadBeforeSortValue()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->ensureGetIndex(['field' => 'NotAnInt']);
     }
 
     /**
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \InvalidArgumentException
      */
     public function ensureGetIndexWithBadAfterSortValue()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->ensureGetIndex([], ['field' => 'NotAnInt']);
     }
 
@@ -127,11 +127,11 @@ final class QueueTest extends TestCase
      *
      * @test
      * @covers ::ensureGetIndex
-     * @expectedException \Exception
-     * @expectedExceptionMessage couldnt create index after 5 attempts
      */
     public function ensureIndexCannotBeCreatedAfterFiveAttempts()
     {
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('couldnt create index after 5 attempts');
         $mockCollection = $this->getMockBuilder('\MongoDB\Collection')->disableOriginalConstructor()->getMock();
 
         $mockCollection->method('listIndexes')->willReturn([]);
@@ -180,20 +180,20 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::ensureCountIndex
-     * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithNonStringKey()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->ensureCountIndex([0 => 1], false);
     }
 
     /**
      * @test
      * @covers ::ensureCountIndex
-     * @expectedException \InvalidArgumentException
      */
     public function ensureCountIndexWithBadValue()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->ensureCountIndex(['field' => 'NotAnInt'], false);
     }
 
@@ -237,10 +237,10 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::get
-     * @expectedException \InvalidArgumentException
      */
     public function getWithNonStringKey()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->get([0 => 'a value']);
     }
 
@@ -386,10 +386,10 @@ final class QueueTest extends TestCase
     /**
      * @test
      * @covers ::count
-     * @expectedException \InvalidArgumentException
      */
     public function countWithNonStringKey()
     {
+        $this->expectException(\InvalidArgumentException::class);
         $this->queue->count([0 => 'a value']);
     }
 

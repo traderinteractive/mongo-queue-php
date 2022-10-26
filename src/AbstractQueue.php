@@ -264,7 +264,7 @@ abstract class AbstractQueue
      *
      * @throws \Exception couldnt create index after 5 attempts
      */
-    final private function ensureIndex(array $index)
+    private function ensureIndex(array $index)
     {
         if ($this->isIndexIncludedInExistingIndex($index)) {
             return;
@@ -384,7 +384,7 @@ abstract class AbstractQueue
      *
      * @return void
      */
-    final private function verifySort(array $sort, string $label, array &$completeFields)
+    private function verifySort(array $sort, string $label, array &$completeFields)
     {
         foreach ($sort as $key => $value) {
             $this->throwIfTrue(!is_string($key), "key in \${$label} was not a string");
