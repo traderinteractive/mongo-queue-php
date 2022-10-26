@@ -3,6 +3,15 @@ filter:
         - 'vendor/*'
 before_commands:
     - 'composer install'
+build:
+    nodes:
+        analysis:
+            tests:
+                override:
+                    - php-scrutinizer-run
+    tests:
+        override:
+            - phpcs-run --standard=PSR2
 tools:
     php_analyzer: true
     php_mess_detector: true
