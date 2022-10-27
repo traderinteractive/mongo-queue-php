@@ -1,15 +1,13 @@
 # mongo-queue-php
-[![Build Status](https://travis-ci.org/traderinteractive/mongo-queue-php.svg?branch=master)](https://travis-ci.org/traderinteractive/mongo-queue-php)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/traderinteractive/mongo-queue-php/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/traderinteractive/mongo-queue-php/?branch=master)
-[![Coverage Status](https://coveralls.io/repos/github/traderinteractive/mongo-queue-php/badge.svg)](https://coveralls.io/github/traderinteractive/mongo-queue-php)
 
-[![Latest Stable Version](https://poser.pugx.org/traderinteractive/mongo-queue-php/v/stable)](https://packagist.org/packages/traderinteractive/mongo-queue-php)
-[![Latest Unstable Version](https://poser.pugx.org/traderinteractive/mongo-queue-php/v/unstable)](https://packagist.org/packages/traderinteractive/mongo-queue-php)
-[![License](https://poser.pugx.org/traderinteractive/mongo-queue-php/license)](https://packagist.org/packages/traderinteractive/mongo-queue-php)
+[![Latest Stable Version](https://poser.pugx.org/traderinteractive/mongo-queue/v/stable)](https://packagist.org/packages/traderinteractive/mongo-queue)
+[![Latest Unstable Version](https://poser.pugx.org/traderinteractive/mongo-queue/v/unstable)](https://packagist.org/packages/traderinteractive/mongo-queue)
+[![License](https://poser.pugx.org/traderinteractive/mongo-queue/license)](https://packagist.org/packages/traderinteractive/mongo-queue)
 
-[![Total Downloads](https://poser.pugx.org/traderinteractive/mongo-queue-php/downloads)](https://packagist.org/packages/traderinteractive/mongo-queue-php)
-[![Daily Downloads](https://poser.pugx.org/traderinteractive/mongo-queue-php/d/daily)](https://packagist.org/packages/traderinteractive/mongo-queue-php)
-[![Monthly Downloads](https://poser.pugx.org/traderinteractive/mongo-queue-php/d/monthly)](https://packagist.org/packages/traderinteractive/mongo-queue-php)
+[![Total Downloads](https://poser.pugx.org/traderinteractive/mongo-queue/downloads)](https://packagist.org/packages/traderinteractive/mongo-queue)
+[![Daily Downloads](https://poser.pugx.org/traderinteractive/mongo-queue/d/daily)](https://packagist.org/packages/traderinteractive/mongo-queue)
+[![Monthly Downloads](https://poser.pugx.org/traderinteractive/mongo-queue/d/monthly)](https://packagist.org/packages/traderinteractive/mongo-queue)
 
 PHP message queue using MongoDB as a backend.
 
