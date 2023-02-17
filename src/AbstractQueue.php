@@ -408,9 +408,8 @@ abstract class AbstractQueue
         }
     }
 
-    private function calculateEndTime(int $waitDurationInMillis) : int
+    private function calculateEndTime(int $waitDurationInMillis) : float
     {
-        //ints overflow to floats, should be fine
         return microtime(true) + ($waitDurationInMillis / 1000.0);
     }
 }
