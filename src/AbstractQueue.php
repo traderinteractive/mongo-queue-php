@@ -157,7 +157,7 @@ abstract class AbstractQueue
             $query
         );
 
-        $options += self::DEFAULT_GET_OPTIONS;
+        $options += static::DEFAULT_GET_OPTIONS;
         $update = ['$set' => ['earliestGet' => $this->calculateEarliestGet($options['runningResetDuration'])]];
         $end = $this->calculateEndTime($options['waitDurationInMillis']);
         $sleepTime = $this->calculateSleepTime($options['pollDurationInMillis']);
@@ -305,12 +305,12 @@ abstract class AbstractQueue
     {
         $resetTimestamp = time() + $runningResetDuration;
         //ints overflow to floats, max at PHP_INT_MAX
-        return new UTCDateTime(min(max(0, $resetTimestamp * 1000), self::MONGO_INT32_MAX));
+        return new UTCDateTime(min(max(0, $resetTimestamp * 1000), static::MONGO_INT32_MAX));
     }
 
     private function tryFindOneAndUpdate(array $query, array $update, ArrayObject $messages) : bool
     {
-        $document = $this->collection->findOneAndUpdate($query, $update, self::FIND_ONE_AND_UPDATE_OPTIONS);
+        $document = $this->collection->findOneAndUpdate($query, $update, static::FIND_ONE_AND_UPDATE_OPTIONS);
         if ($document === null) {
             return false;
         }
