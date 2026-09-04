@@ -378,7 +378,7 @@ final class QueueTest extends TestCase
 
         $this->assertSame([], $this->queue->get($messageOne->getPayload()));
 
-        sleep(1);
+        sleep(2);
 
         $this->assertCount(1, $this->queue->get($messageOne->getPayload()));
     }
@@ -449,6 +449,8 @@ final class QueueTest extends TestCase
         $message = $this->queue->get([])[0];
 
         $this->assertSameMessage($messages[0], $message);
+
+        sleep(1);
 
         $this->queue->requeue($message->withEarliestGet(new UTCDateTime((int)(microtime(true) * 1000))));
 
